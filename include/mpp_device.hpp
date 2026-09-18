@@ -1,5 +1,4 @@
-#ifndef MPP_DEVICE_H
-#define MPP_DEVICE_H
+#pragma once
 
 #include <vector>
 
@@ -28,4 +27,4 @@ public:
 };
     
 } // namespace mpp
-#endif
+
