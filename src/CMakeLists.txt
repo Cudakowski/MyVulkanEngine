@@ -3,6 +3,20 @@ set(SOURCES
     main.cpp
     ../assets/shader.slang
     app.cpp
+    keyboard_movement_controller.cpp
+    mpp_buffer.cpp
+    mpp_camera.cpp
+    mpp_checks.cpp
+    mpp_descriptors.cpp
+    mpp_device.cpp
+    mpp_frame_info.cpp
+    mpp_game_object.cpp
+    mpp_model.cpp
+    mpp_pipeline.cpp
+    mpp_renderer.cpp
+    mpp_swap_chain.cpp
+    mpp_utils.cpp
+    mpp_window.cpp
 )
 
 

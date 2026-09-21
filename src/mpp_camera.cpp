@@ -1,2 +1,2 @@
-#include "mpp_camera.h"
+#include "mpp_camera.hpp"
 

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
 
 
-set(PROJECT_NAME "Prot3")
+set(PROJECT_NAME "Prot4")
 project(${PROJECT_NAME} VERSION 1.0.0 LANGUAGES CXX C)
 
 # Ustawienia Debug/Release
