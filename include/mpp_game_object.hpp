@@ -1,5 +1,9 @@
 #pragma once
 
+namespace mpp
+{
+
+
 class MppGameObject 
 {
 private:
@@ -7,4 +11,8 @@ private:
 public:
 };
 
+
+
+
+} // namespace mpp
 

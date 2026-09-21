@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mpp_device.hpp"
+#include "mpp_window.hpp"
 
 #define VOLK_IMPLEMENTATION
 #include <vulkan/vulkan.h>
@@ -42,11 +43,8 @@ private:
     /* data */
     
 
-    VkDevice device{ VK_NULL_HANDLE };// logical device
-    VkQueue queue{ VK_NULL_HANDLE};// kolejka z komendami(cammand buffer)
-    VmaAllocator allocator{ VK_NULL_HANDLE };//alokator
-    VkSurfaceKHR surface{ VK_NULL_HANDLE };// powieżchnia, na której jest wyświetlanie
-    glm::ivec2 windowSize{};// wielkość okna
+
+    
     VkSwapchainKHR swapchain{ VK_NULL_HANDLE };// swapchain
     std::vector<VkImage> swapchainImages;
     std::vector<VkImageView> swapchainImageViews;
@@ -113,6 +111,7 @@ private:
     void initialize();
 
     MppDevice mppDevice{};
+    MppWindow mppWindow{mppDevice.getInstance()};
 
 
 public:

@@ -21,141 +21,14 @@ App::App(/* args */)
 {
     initialize();
 
-    
 
-    
 
-    // QUEUES ===============================================
-
-    // pobieranie najpierw liczby rodzin kolejek a potem pobiranie kolejek
-    uint32_t queueFamilyCount{0};
-    vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, nullptr);
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, queueFamilies.data());
-    
-    // szukamy kolejki graficznej
-    uint32_t queueFamily{0};
-    for (size_t i{0}; i < queueFamilies.size(); i++) {
-        if(queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT){
-            queueFamily = i;
-            break;
-        }
-    }
-    //sprawdzamy czy ta kolejka wspiera prezentowanie
-    chk(SDL_Vulkan_GetPresentationSupport(instance, devices[deviceIndex], queueFamily));
-
-    // zapisujemy info tej rodziny kolejek
-    // jest możliwe posiadania wielu kolejek dlatego specyfikuje 
-    // się priorytet, ale tu jest ino jedna
-    const float qfpriorities{ 1.0f };
-    VkDeviceQueueCreateInfo queueCI{
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .queueFamilyIndex = queueFamily,
-        .queueCount =1,
-        .pQueuePriorities = &qfpriorities
-    };
-
-    // DEVICE SETUP ======================================
-
-    // pobieranie rozszerzeń
-    // tylko swapchain żeby wyświetlić coś
-    const std::vector<const char*> deviceExtensions{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-
-    /*
-    The Vulkan header defines constants for all extensions like 
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME. You can use these instead of 
-    writing their name as a string. This helps to avoid typos in 
-    extension names.
-    */
-
-    // używanie feature'ów bez rzszerzeń
-    // włączenie feature'ów
-    VkPhysicalDeviceVulkan12Features enabledVk12Features{
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-        .descriptorIndexing = true,
-        .shaderSampledImageArrayNonUniformIndexing = true,// coś o indeksowaniu descriptorów
-        .descriptorBindingVariableDescriptorCount = true,// coś o indeksowaniu descriptorów
-        .runtimeDescriptorArray = true,// coś o indeksowaniu descriptorów
-        .bufferDeviceAddress = true
-    };
-
-    VkPhysicalDeviceVulkan13Features enabledVk13Features{
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-        .pNext = &enabledVk12Features,
-        .synchronization2 = true,
-        .dynamicRendering = true // to to ten hehe :D
-    };
-    
-    VkPhysicalDeviceFeatures enabledVk10Features{
-        .samplerAnisotropy = VK_TRUE // lepsze filterowanie tekstur(cokolwiek to znaczy)
-    };
-
-    /*
-    Another Vulkan struct member you're going to see often is 
-    pNext. This can be used to create a linked list of structures 
-    that are passed into a function call. The driver then uses the 
-    sType member of each structure in that list to identify said 
-    structure's type.
-    */
-
-    // tworzenie logical device
-    VkDeviceCreateInfo deviceCI{
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = &enabledVk13Features,
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queueCI,
-        .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
-        .ppEnabledExtensionNames = deviceExtensions.data(),
-        .pEnabledFeatures = &enabledVk10Features
-    };
-    //tworzenie i sprawdzanie od razu wyniku
-    //już mnie denerwuje że nazwy nie są do końca opisujące dobrze
-    // przyjmuje: physical device, create info structa, alokator, zmienną do której zapisze wynik
-    chk(vkCreateDevice(devices[deviceIndex], &deviceCI, nullptr, &device));
-
-    // proszenie logical device o kolejke komend
-    // przyjmuje: logical device, rodzine kolejek, index kolejki, zmienną do której zapsize wskaźnik do kolejki
-    vkGetDeviceQueue(device, queueFamily, 0, &queue);
-
-    // VMA SETUP ================================
-
-    //struct z wskaźnikami do funkcji vulkana
-    VmaVulkanFunctions vkFunctions{
-        .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
-        .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
-        .vkCreateImage = vkCreateImage
-    };
-    //struct z info
-    VmaAllocatorCreateInfo allocatorCI{
-        .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
-        .physicalDevice = devices[deviceIndex],
-        .device = device,
-        .pVulkanFunctions = &vkFunctions,
-        .instance = instance
-    };
-    //tworzenie alokatora i sprawdzanie
-    chk(vmaCreateAllocator(&allocatorCI, &allocator));
-
-    // WINDOW AND SURFACE ==============================
-
-    // tworzenie okna za pomocą SDL'a
-    SDL_Window* window = SDL_CreateWindow("Ale jak to Vulkan", 1280u, 720u, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
-    assert(window);// takie tam sprawdzanie czy działa
-
-    // requestowanie suface'a dla tego okna i sprawdzanie
-    // przyjmuje wksźnik do okna, instancje, alokator, i zmienną z 
-    // powieżchnią do której zapisuje wynik
-    chk(SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface));
-
-    // pobieranie wielkości okna(nie mam pjęcia po jakiego kija pobieramy wielkośc okna kiedy jest to wpisanie zaraz wyżej)
-    chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
+    // SWAPCHAIN =======================================
 
     // pobieranie właściwości powieżchni
     VkSurfaceCapabilitiesKHR surfaceCaps{};// tu jest zapisywany wynik
     chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(devices[deviceIndex], surface, &surfaceCaps));
-
-    // SWAPCHAIN =======================================
-
+    
     // pobieramy extent
     VkExtent2D swapchainExtent{ surfaceCaps.currentExtent };
     if (surfaceCaps.currentExtent.width == 0xFFFFFFFF) {
