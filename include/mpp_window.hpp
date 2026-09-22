@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mpp_device.hpp"
 
 #define VOLK_IMPLEMENTATION
 #include <vulkan/vulkan.h>
@@ -11,20 +12,36 @@
 #include <glm/glm.hpp>
 
 #include <cassert>
+#include <string>
 
 namespace mpp
 {
 
-
+// TODO: podzielić MppWindow na MppWindow i MppSurface
 class MppWindow 
 {
 private:
     VkSurfaceKHR surface{ VK_NULL_HANDLE };// powieżchnia, na której jest wyświetlanie
     glm::ivec2 windowSize{};// wielkość okna
+    SDL_Window* window;
+    VkSurfaceCapabilitiesKHR surfaceCaps{};
+
+    MppDevice &mppDevice;
 
 public:
 
-    MppWindow(VkInstance instance);
+    MppWindow(MppDevice &device, std::string name, int width, int height);
+    ~MppWindow();
+
+    MppWindow(const MppWindow&) = delete;
+    MppWindow& operator=(const MppWindow&) = delete;
+
+
+    VkSurfaceKHR getSurface(){return surface;}
+    VkSurfaceCapabilitiesKHR getSurfaceCaps(){return surfaceCaps;}
+    glm::ivec2 getWindowSize(){return windowSize;}
+    VkExtent2D getExtent();
+
 
 };
 

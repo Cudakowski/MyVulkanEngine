@@ -11,12 +11,14 @@
 #include <iostream>
 #include <vector>
 #include <cassert>
+#include <filesystem>
 
 namespace mpp
 {
 
 MppDevice::MppDevice()
 {
+    initialize();
     createInstance();
     detectingDevice();
     deviceSetup();
@@ -25,6 +27,19 @@ MppDevice::MppDevice()
 
 MppDevice::~MppDevice()
 {
+    
+}
+
+void MppDevice::initialize()
+{
+    // Make sure asset folder is present from the current working directory
+	if (!std::filesystem::is_directory("assets")) {
+		std::cerr << "Could not locate assets folder from current working directory\n";
+		exit(-1);
+	}
+	chk(SDL_Init(SDL_INIT_VIDEO));
+	chk(SDL_Vulkan_LoadLibrary(NULL));
+	volkInitialize();
 }
 
 void MppDevice::vmaSetup()

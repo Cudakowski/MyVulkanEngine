@@ -2,6 +2,8 @@
 
 #include "mpp_device.hpp"
 #include "mpp_window.hpp"
+#include "mpp_pipeline.hpp"
+#include "mpp_renderer.hpp"
 
 #define VOLK_IMPLEMENTATION
 #include <vulkan/vulkan.h>
@@ -45,12 +47,8 @@ private:
 
 
     
-    VkSwapchainKHR swapchain{ VK_NULL_HANDLE };// swapchain
-    std::vector<VkImage> swapchainImages;
-    std::vector<VkImageView> swapchainImageViews;
-    VkImage depthImage;
-    VmaAllocation depthImageAllocation;
-    VkImageView depthImageView;
+    
+    
     struct Vertex {
         glm::vec3 pos;
         glm::vec3 normal;
@@ -108,10 +106,10 @@ private:
         }
     }
 
-    void initialize();
 
     MppDevice mppDevice{};
-    MppWindow mppWindow{mppDevice.getInstance()};
+    MppWindow mppWindow{mppDevice, "Ale jak to vulkan", 1280, 720};
+    MppRenderer mppRenderer{mppDevice,mppWindow};
 
 
 public:

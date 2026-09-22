@@ -14,6 +14,7 @@ namespace mpp
 class MppDevice 
 {
 private:
+    void initialize();
     void createInstance();
     void detectingDevice();
     void deviceSetup();
@@ -37,6 +38,9 @@ public:
     MppDevice& operator=(MppDevice&&) = delete;
 
     VkInstance getInstance(){return instance;}
+    VkPhysicalDevice getPhysicalDevice(){return devices[deviceIndex];}
+    VkDevice getLogicalDevice(){return device;}
+    VmaAllocator getAllocator(){return allocator;}
 };
     
 } // namespace mpp

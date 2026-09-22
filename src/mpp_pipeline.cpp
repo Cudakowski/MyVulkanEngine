@@ -2,5 +2,11 @@
 
 namespace mpp
 {
+
+MppPipeline::MppPipeline()
+{
     
+}
+
+
 } // namespace mpp
