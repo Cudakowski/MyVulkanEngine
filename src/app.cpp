@@ -5,69 +5,20 @@
 namespace mpp
 {
 
+void App::loadGameObjects()
+{
+    std::shared_ptr<MppModel> mppModel = mppLoader.createModelFromFile("assets/suzanne.obj");
+    auto object{MppGameObject::createGameObject()};
+    object.model = mppModel;
+    gameOjects.emplace(object.getId(), std::move(object));
+}
 
 
 App::App(/* args */)
 {
+    loadGameObjects();    
 
 
-    // LOADING MESHES ===========================================
-
-    //łądowanie modelu :DDDD
-    // Mesh data
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    chk(tinyobj::LoadObj(&attrib, &shapes, &materials, nullptr, nullptr, "assets/suzanne.obj"));
-
-    // zmieniamy pobrane dane na taki format jaki chcemy żeby potem załadować to do gpu
-    const VkDeviceSize indexCount{shapes[0].mesh.indices.size()};
-    std::vector<Vertex> vertices{};
-    std::vector<uint16_t> indices{};
-    //load vertex and index data
-    for (auto& index : shapes[0].mesh.indices) {
-        Vertex v{
-            .pos = {attrib.vertices[index.vertex_index * 3], -attrib.vertices[index.vertex_index * 3 + 1], attrib.vertices[index.vertex_index * 3 + 2]},
-            .normal = {attrib.normals[index.normal_index * 3], -attrib.normals[index.normal_index * 3 + 1], attrib.normals[index.normal_index * 3 + 2]},
-            .uv = {attrib.texcoords[index.texcoord_index * 2], 1.0 - attrib.texcoords[index.texcoord_index * 2 + 1]}
-        };
-        vertices.push_back(v);
-        indices.push_back(indices.size());
-    }
-    /*
-    The value of the position's and normal's y-axis, and the texture coordinate's 
-    v-axis are flipped. This is done to accommodate for Vulkan's coordinate system. 
-    Otherwise the model and the texture image would appear upside down.
-    */
-
-
-    // tworzenie buffera na vertex i index data
-    VkDeviceSize vBufSize{sizeof(Vertex) * vertices.size()};
-    VkDeviceSize iBufSize{sizeof(uint16_t) * indices.size()};
-    VkBufferCreateInfo bufferCI{
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = vBufSize + iBufSize,
-        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT
-    };
-
-    // używamy vma do alokacji pamięci buffera na vertex and index data
-    VmaAllocationCreateInfo vBufferAllocCI{
-        // flagi do resizable BAR !! :D
-        .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-        .usage = VMA_MEMORY_USAGE_AUTO
-    }; 
-    VmaAllocationInfo vBufferAllocInfo{};
-    chk(vmaCreateBuffer(allocator, &bufferCI, &vBufferAllocCI, &vBuffer, &vBufferAllocation, &vBufferAllocInfo));
-    
-    /* VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
-    Without this we'd have to create a so-called "staging" buffer on the host, 
-    copy data to that buffer and then submit a buffer copy from staging to the 
-    GPU side buffer using a command buffer. That would require a lot more code.
-    */
-
-    //kopiowanie danych do vramu
-    memcpy(vBufferAllocInfo.pMappedData, vertices.data(), vBufSize);
-    memcpy(((char*)vBufferAllocInfo.pMappedData) + vBufSize, indices.data(), iBufSize);
 
     // CPU AND GPU PARALLELISM ========================================================
 
@@ -79,7 +30,7 @@ App::App(/* args */)
 
     // SHADER DATA BUFFERS ============================================================
 
-    // wyżej struct na dane go shaderów
+    // wyżej struct na dane do shaderów
     // nie będziemy robić descriptorów itd bo jest jakiś inny feature co działa przez wskaźnik
 
     for (auto i = 0; i < maxFramesInFlight; i++) {

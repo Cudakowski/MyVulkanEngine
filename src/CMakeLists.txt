@@ -17,6 +17,7 @@ set(SOURCES
     mpp_swap_chain.cpp
     mpp_utils.cpp
     mpp_window.cpp
+    mpp_loader.cpp
 )
 
 

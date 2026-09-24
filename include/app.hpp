@@ -4,6 +4,8 @@
 #include "mpp_window.hpp"
 #include "mpp_pipeline.hpp"
 #include "mpp_renderer.hpp"
+#include "mpp_loader.hpp"
+#include "mpp_game_object.hpp"
 
 #define VOLK_IMPLEMENTATION
 #include <vulkan/vulkan.h>
@@ -42,20 +44,9 @@ namespace mpp
 class App
 {
 private:
-    /* data */
-    
-
 
     
     
-    
-    struct Vertex {
-        glm::vec3 pos;
-        glm::vec3 normal;
-        glm::vec2 uv;
-    };
-    VkBuffer vBuffer{VK_NULL_HANDLE};
-    VmaAllocation vBufferAllocation{VK_NULL_HANDLE};
     struct ShaderDataBuffer {
         VmaAllocation allocation{ VK_NULL_HANDLE };
         VmaAllocationInfo allocationInfo{};
@@ -110,7 +101,11 @@ private:
     MppDevice mppDevice{};
     MppWindow mppWindow{mppDevice, "Ale jak to vulkan", 1280, 720};
     MppRenderer mppRenderer{mppDevice,mppWindow};
+    MppLoader mppLoader{};
 
+    MppGameObject::Map gameOjects;
+
+    void loadGameObjects();
 
 public:
     App(/* args */);
