@@ -38,7 +38,6 @@
 
 namespace mpp
 {
-    constexpr uint32_t maxFramesInFlight{ 2 };
     bool updateSwapchain{ false };
     
 class App
@@ -53,8 +52,8 @@ private:
         VkBuffer buffer{ VK_NULL_HANDLE };
         VkDeviceAddress deviceAddress{};
     };
-    std::array<ShaderDataBuffer, maxFramesInFlight> shaderDataBuffers;
-    std::array<VkCommandBuffer, maxFramesInFlight> commandBuffers;
+    std::array<ShaderDataBuffer, MAX_FRAMES_IN_FLIGHT> shaderDataBuffers;
+    std::array<VkCommandBuffer, MAX_FRAMES_IN_FLIGHT> commandBuffers;
     struct ShaderData{
         glm::mat4 projection;
         glm::mat4 view;
@@ -62,8 +61,8 @@ private:
         glm::vec4 lightPos{ 0.0f, -10.0f, 10.0f, 0.0f};
         uint32_t selected{1};
     } shaderData{};
-    std::array<VkFence, maxFramesInFlight> fences;
-    std::array<VkSemaphore, maxFramesInFlight> imageAcquiredSemaphores;
+    std::array<VkFence, MAX_FRAMES_IN_FLIGHT> fences;
+    std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> imageAcquiredSemaphores;
     std::vector<VkSemaphore> renderCompleteSemaphores;
     VkCommandPool commandPool{ VK_NULL_HANDLE };
     struct Texture {

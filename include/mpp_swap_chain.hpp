@@ -8,6 +8,7 @@
 namespace mpp
 {
 
+constexpr uint32_t MAX_FRAMES_IN_FLIGHT{ 2 };
 
 class MppSwapChain 
 {
@@ -28,6 +29,7 @@ private:
     void createSwapChain();
     void createImageViews();
     void createDepthAttachment();
+    void createShaderAndDataBuffers();
 
 public:
     MppSwapChain(MppDevice &device, MppWindow &window);
