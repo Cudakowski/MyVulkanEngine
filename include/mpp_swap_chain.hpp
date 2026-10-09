@@ -24,12 +24,34 @@ private:
     VmaAllocation depthImageAllocation;
     VkImageView depthImageView;
 
+    struct ShaderDataBuffer {
+        VmaAllocation allocation{ VK_NULL_HANDLE };
+        VmaAllocationInfo allocationInfo{};
+        VkBuffer buffer{ VK_NULL_HANDLE };
+        VkDeviceAddress deviceAddress{};
+    };
+    std::array<ShaderDataBuffer, MAX_FRAMES_IN_FLIGHT> shaderDataBuffers;
+    std::array<VkCommandBuffer, MAX_FRAMES_IN_FLIGHT> commandBuffers;
+    struct ShaderData{
+        glm::mat4 projection;
+        glm::mat4 view;
+        glm::mat4 model[3];
+        glm::vec4 lightPos{ 0.0f, -10.0f, 10.0f, 0.0f};
+        uint32_t selected{1};
+    } shaderData{};
+
+    std::array<VkFence, MAX_FRAMES_IN_FLIGHT> fences;
+    std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> imageAcquiredSemaphores;
+    std::vector<VkSemaphore> renderCompleteSemaphores;
+
     const VkFormat imageFormat{VK_FORMAT_B8G8R8A8_SRGB };
 
     void createSwapChain();
     void createImageViews();
     void createDepthAttachment();
     void createShaderAndDataBuffers();
+    void createSynchronizationObjects();
+    void createCommandBuffers();
 
 public:
     MppSwapChain(MppDevice &device, MppWindow &window);

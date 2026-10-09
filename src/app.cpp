@@ -22,48 +22,9 @@ App::App(/* args */)
 
     
 
-    // SYNCHRONIZATION OBJECTS =====================================================
+    
 
-    // fences, binary semaphores and pipeline barrirers
-    VkSemaphoreCreateInfo semaphoreCI{
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
-    };
-    VkFenceCreateInfo fenceCI{
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT
-    };
-    for ( auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++){
-        chk(vkCreateFence(device, &fenceCI, nullptr, &fences[i]));
-        chk(vkCreateSemaphore(device, &semaphoreCI, nullptr, &imageAcquiredSemaphores[i]));
-    }
-    renderCompleteSemaphores.resize(swapchainImages.size());
-    for (auto &semaphore : renderCompleteSemaphores)
-    {
-        chk(vkCreateSemaphore(device, &semaphoreCI, nullptr, &semaphore));
-    }
-
-    // COMMAND BUFFERS ==============================================================
-
-    // buffery komend musza być zalokowane z command pool'a
-    VkCommandPoolCreateInfo commandPoolCI{
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = queueFamily
-    };
-    chk(vkCreateCommandPool(device, &commandPoolCI, nullptr, &commandPool));
-
-    /*
-    It's not uncommon to have multiple command pools in a more complex application. 
-    They're cheap to create and if you want to record command buffers from multiple 
-    threads you require one such pool per thread.
-    */
-
-    VkCommandBufferAllocateInfo cbAllocCI{
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = commandPool,
-        .commandBufferCount = MAX_FRAMES_IN_FLIGHT
-    };
-    chk(vkAllocateCommandBuffers(device, &cbAllocCI, commandBuffers.data()));
+    
 
     // LOADING TEXTURES ============================================================
 

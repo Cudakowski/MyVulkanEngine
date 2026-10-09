@@ -10,8 +10,54 @@ MppSwapChain::MppSwapChain(MppDevice &device, MppWindow &window): mppDevice{devi
     createSwapChain();
     createImageViews();
     createDepthAttachment();
-    createShaderAndDataBuffers();    
+    createShaderAndDataBuffers();
+    createSynchronizationObjects();
+    createCommandBuffers();
 }
+
+void MppSwapChain::createCommandBuffers()
+{
+    // COMMAND BUFFERS ==============================================================
+
+
+
+    /*
+    It's not uncommon to have multiple command pools in a more complex application. 
+    They're cheap to create and if you want to record command buffers from multiple 
+    threads you require one such pool per thread.
+    */
+
+    VkCommandBufferAllocateInfo cbAllocCI{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = mppDevice.getCommandPool(),
+        .commandBufferCount = MAX_FRAMES_IN_FLIGHT
+    };
+    chk(vkAllocateCommandBuffers(mppDevice.getLogicalDevice(), &cbAllocCI, commandBuffers.data()));
+}
+
+void MppSwapChain::createSynchronizationObjects()
+{
+    // SYNCHRONIZATION OBJECTS =====================================================
+
+    // fences, binary semaphores and pipeline barrirers
+    VkSemaphoreCreateInfo semaphoreCI{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
+    };
+    VkFenceCreateInfo fenceCI{
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT
+    };
+    for ( auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++){
+        chk(vkCreateFence(mppDevice.getLogicalDevice(), &fenceCI, nullptr, &fences[i]));
+        chk(vkCreateSemaphore(mppDevice.getLogicalDevice(), &semaphoreCI, nullptr, &imageAcquiredSemaphores[i]));
+    }
+    renderCompleteSemaphores.resize(swapchainImages.size());
+    for (auto &semaphore : renderCompleteSemaphores)
+    {
+        chk(vkCreateSemaphore(mppDevice.getLogicalDevice(), &semaphoreCI, nullptr, &semaphore));
+    }
+}
+
 
 void MppSwapChain::createShaderAndDataBuffers()
 {
@@ -38,13 +84,13 @@ void MppSwapChain::createShaderAndDataBuffers()
             .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
             .usage = VMA_MEMORY_USAGE_AUTO
         };
-        chk(vmaCreateBuffer(allocator, &uBufferCI, &uBufferAllocCI, &shaderDataBuffers[i].buffer, &shaderDataBuffers[i].allocation, &shaderDataBuffers[i].allocationInfo));
+        chk(vmaCreateBuffer(mppDevice.getAllocator(), &uBufferCI, &uBufferAllocCI, &shaderDataBuffers[i].buffer, &shaderDataBuffers[i].allocation, &shaderDataBuffers[i].allocationInfo));
         VkBufferDeviceAddressInfo uBufferBdaInfo{
             .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
             .buffer = shaderDataBuffers[i].buffer
         };
         /*To be able to access the buffer in our shader, we then get its device address and store it for later access.*/
-        shaderDataBuffers[i].deviceAddress = vkGetBufferDeviceAddress(device, &uBufferBdaInfo);
+        shaderDataBuffers[i].deviceAddress = vkGetBufferDeviceAddress(mppDevice.getLogicalDevice(), &uBufferBdaInfo);
     }
 }
 

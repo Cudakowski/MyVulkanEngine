@@ -19,14 +19,17 @@ private:
     void detectingDevice();
     void deviceSetup();
     void vmaSetup();
+    void createCommandPool();
 
     VkInstance instance{ VK_NULL_HANDLE }; //instancja, po najechaniu myszką można zobaczyć że to wskaźnik inicjalizowany nullptr'em
     std::vector<VkPhysicalDevice> devices;
     uint32_t deviceIndex{0};// defaultowo 0
+    uint32_t queueFamily{0};
 
     VkDevice device{ VK_NULL_HANDLE };// logical device
     VkQueue queue{ VK_NULL_HANDLE};// kolejka z komendami(cammand buffer)
     VmaAllocator allocator{ VK_NULL_HANDLE };//alokator
+    VkCommandPool commandPool{ VK_NULL_HANDLE };
 
 public:
     MppDevice();
@@ -41,6 +44,9 @@ public:
     VkPhysicalDevice getPhysicalDevice(){return devices[deviceIndex];}
     VkDevice getLogicalDevice(){return device;}
     VmaAllocator getAllocator(){return allocator;}
+    uint32_t gatQueueFamily(){return queueFamily;}
+    VkCommandPool getCommandPool(){return commandPool;}
+
 };
     
 } // namespace mpp

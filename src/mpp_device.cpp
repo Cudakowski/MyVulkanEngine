@@ -23,11 +23,25 @@ MppDevice::MppDevice()
     detectingDevice();
     deviceSetup();
     vmaSetup();
+    createCommandPool();
 }
 
 MppDevice::~MppDevice()
 {
     
+}
+
+void MppDevice::createCommandPool()
+{
+    // COMMAND BUFFERS ==============================================================
+
+    // buffery komend musza być zalokowane z command pool'a
+    VkCommandPoolCreateInfo commandPoolCI{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = queueFamily
+    };
+    chk(vkCreateCommandPool(device, &commandPoolCI, nullptr, &commandPool));
 }
 
 void MppDevice::initialize()
@@ -75,7 +89,6 @@ void MppDevice::deviceSetup()
     vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, queueFamilies.data());
     
     // szukamy kolejki graficznej
-    uint32_t queueFamily{0};
     for (size_t i{0}; i < queueFamilies.size(); i++) {
         if(queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT){
             queueFamily = i;
