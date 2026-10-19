@@ -1,6 +1,6 @@
 #include "app.hpp"
 
-
+#include "basic_render_system.hpp"
 
 namespace mpp
 {
@@ -8,471 +8,56 @@ namespace mpp
 void App::loadGameObjects()
 {
     std::shared_ptr<MppModel> mppModel = mppLoader.createModelFromFile("assets/suzanne.obj");
-    auto object{MppGameObject::createGameObject()};
-    object.model = mppModel;
-    gameOjects.emplace(object.getId(), std::move(object));
+    std::shared_ptr<MppTexture> mppTexture = mppLoader.createTextureFromFile("assets/suzanne0.ktx");
+    auto object1{MppGameObject::createGameObject()};
+    object1.model = mppModel;
+    object1.texture = mppTexture;
+    gameOjects.emplace(object1.getId(), std::move(object1));
+
+    mppTexture = mppLoader.createTextureFromFile("assets/suzanne1.ktx");
+    auto object2{MppGameObject::createGameObject()};
+    object2.model = mppModel;
+    object2.texture = mppTexture;
+    gameOjects.emplace(object2.getId(), std::move(object2));
+
+    mppTexture = mppLoader.createTextureFromFile("assets/suzanne2.ktx");
+    auto object3{MppGameObject::createGameObject()};
+    object3.model = mppModel;
+    object3.texture = mppTexture;
+    gameOjects.emplace(object3.getId(), std::move(object3));
+
+    mppLoader.initializeTextures();
 }
 
 
 App::App(/* args */)
 {
     loadGameObjects();    
+    mppLoader.loadShaders();
 
 
+}
 
-    
+App::~App()
+{
 
-    
+}
 
-    
+void App::run()
+{
+    BasicRenderSystem simpleRenderSystem{mppDevice, mppRenderer, mppLoader };
 
-    // LOADING TEXTURES ============================================================
-
-    //używany będzie ty format ktx, oficjalny od khronosa w formacie gpu'owym
-    std::vector<VkDescriptorImageInfo> textureDescriptors{};
-    for ( auto i = 0; i < textures.size(); i++) {
-        ktxTexture* ktxTexture{ nullptr };
-        std::string filename = "assets/suzanne" + std::to_string(i) + ".ktx";
-        ktxTexture_CreateFromNamedFile(filename.c_str(), KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &ktxTexture);
-        VkImageCreateInfo texImgCI{
-            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .imageType = VK_IMAGE_TYPE_2D,
-            .format = ktxTexture_GetVkFormat(ktxTexture),
-            .extent = {.width = ktxTexture->baseWidth, .height = ktxTexture->baseHeight, .depth = 1},
-            .mipLevels = ktxTexture->numLevels,
-            .arrayLayers = 1,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
-            .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-        };
-        VmaAllocationCreateInfo texImageAllocCI{ .usage = VMA_MEMORY_USAGE_AUTO};
-        chk(vmaCreateImage(allocator, &texImgCI, &texImageAllocCI, &textures[i].image, &textures[i].allocation, nullptr));
-        // tworzenie view. View image'a jest dla gpu do dostępu/spoglądania na zdjęcie
-        VkImageViewCreateInfo texVewCI{
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = textures[i].image,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = texImgCI.format,
-            .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = ktxTexture->numLevels, .layerCount = 1}
-        };
-        chk(vkCreateImageView(device, &texVewCI, nullptr, &textures[i].view));
-        
-        // With the empty image created it's time to upload data
-        // nie można skopiować danych tak jak wcześniej w bufferze z 
-        // vertexami bo layout jest specyficzny na danym hardwearze 
-        // dlatego najpierw się to kopiuje do tymczasowego buffera i 
-        // tam komenda automatycznie robi konwersje tak jak chce.
-        VkBuffer imgSrcBuffer{};
-        VmaAllocation imgSrcAllocation{};
-        VkBufferCreateInfo imgSrcBufferCI{
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = (uint32_t)ktxTexture->dataSize,
-            .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT
-        };
-        VmaAllocationCreateInfo imgSrcAllocCI{
-            .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-            .usage = VMA_MEMORY_USAGE_AUTO
-        };
-        VmaAllocationInfo imgSrcAllocInfo{};
-        chk(vmaCreateBuffer(allocator, &imgSrcBufferCI, &imgSrcAllocCI, &imgSrcBuffer, &imgSrcAllocation, &imgSrcAllocInfo));
-        memcpy(imgSrcAllocInfo.pMappedData, ktxTexture->pData, ktxTexture->dataSize);
-
-        //robienie commandBuffera do skopiowania zdjęcia z tego tymczasowego buffera do gpu
-        VkFenceCreateInfo fenceOneTimeCI{
-            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
-        };
-        VkFence fenceOneTime{};
-        chk(vkCreateFence(device, &fenceOneTimeCI, nullptr, &fenceOneTime));
-        VkCommandBuffer cbOneTime{};
-        VkCommandBufferAllocateInfo cbOneTimeAI{
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .commandPool = commandPool,
-            .commandBufferCount = 1
-        };
-        chk(vkAllocateCommandBuffers(device, &cbOneTimeAI, &cbOneTime));
-
-        // nagrywanie komend
-        VkCommandBufferBeginInfo cbOneTimeBI{
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-        };
-        chk(vkBeginCommandBuffer(cbOneTime, &cbOneTimeBI));//begin
-
-
-        VkImageMemoryBarrier2 barrierTexImage{
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-            .srcStageMask = VK_PIPELINE_STAGE_2_NONE,
-            .srcAccessMask = VK_ACCESS_2_NONE,
-            .dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT,
-            .dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT,
-            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            .image = textures[i].image,
-            .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = ktxTexture->numLevels, .layerCount = 1 }
-        };
-        VkDependencyInfo barrierTexInfo{
-            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-            .imageMemoryBarrierCount = 1,
-            .pImageMemoryBarriers = &barrierTexImage
-        };
-        vkCmdPipelineBarrier2(cbOneTime, &barrierTexInfo);//(transition mip levels) ustaw layout tak aby możno było do niego zapisywać
-
-
-        std::vector<VkBufferImageCopy> copyRegions{};
-        for (auto j = 0; j < ktxTexture->numLevels; j++)
-        {
-            ktx_size_t mipOffset{0};
-            KTX_error_code ret = ktxTexture_GetImageOffset(ktxTexture, j, 0, 0, &mipOffset);
-            copyRegions.push_back({
-                .bufferOffset = mipOffset,
-                .imageSubresource{.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = (uint32_t)j, .layerCount = 1 },
-                .imageExtent{.width = ktxTexture->baseWidth >> j, .height = ktxTexture->baseHeight >> j, .depth = 1 }
-            });
-        }
-        // zapisywanie z tymczasowego buffera
-        vkCmdCopyBufferToImage(cbOneTime, imgSrcBuffer, textures[i].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(copyRegions.size()),copyRegions.data());
-
-
-        VkImageMemoryBarrier2 barrierTexRead{
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-            .srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
-            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-            .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
-            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            .newLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
-            .image = textures[i].image,
-            .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = ktxTexture->numLevels, .layerCount = 1 }
-        };
-        barrierTexInfo.pImageMemoryBarriers = &barrierTexRead;
-        vkCmdPipelineBarrier2(cbOneTime, &barrierTexInfo);//(transition mip levels) ustaw layout tak aby możno było go odczytać w shaderze
-        
-        /*
-        Extensions that would make this easier are 
-        VK_EXT_host_image_copy, allowing for copying image data 
-        directly from the CPU without having to use a command 
-        buffer and VK_KHR_unified_image_layouts, simplifying image 
-        layouts. These aren't widely supported yet, but future 
-        candidates for making Vulkan easier to use.
-        */
-        
-        chk(vkEndCommandBuffer(cbOneTime)); // end
-
-        VkCommandBufferSubmitInfo cbOneTimeSubmitInfo{
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-            .commandBuffer = cbOneTime
-        };
-        VkSubmitInfo2 oneTimeSI{
-            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-            .commandBufferInfoCount = 1,
-            .pCommandBufferInfos = &cbOneTimeSubmitInfo
-        };
-
-        chk(vkQueueSubmit2(queue, 1, &oneTimeSI, fenceOneTime));
-        chk(vkWaitForFences(device, 1, &fenceOneTime, VK_TRUE, UINT64_MAX));
-    
-    
-        vkDestroyFence(device, fenceOneTime, nullptr);
-        vmaDestroyBuffer(allocator, imgSrcBuffer, imgSrcAllocation);
-
-        //sampler
-        VkSamplerCreateInfo samplerCI{
-            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .magFilter = VK_FILTER_LINEAR,
-            .minFilter = VK_FILTER_LINEAR,
-            .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-            .anisotropyEnable = VK_TRUE,
-            .maxAnisotropy = 8.0f, // 8 is a widely supported value for max anisotropy
-            .maxLod = (float)ktxTexture->numLevels
-        };
-        chk(vkCreateSampler(device, &samplerCI, nullptr, &textures[i].sampler));
-
-        ktxTexture_Destroy(ktxTexture);
-        textureDescriptors.push_back({
-            .sampler = textures[i].sampler,
-            .imageView = textures[i].view,
-            .imageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL
-        });
-    }
-
-    //Descriptorrrrr (z indexingiem)
-
-    // to na razie sam layout
-    VkDescriptorBindingFlags descVariableFlag{ VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT };
-    VkDescriptorSetLayoutBindingFlagsCreateInfo descBindingFlags{
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
-        .bindingCount = 1,
-        .pBindingFlags = &descVariableFlag
-    };
-    VkDescriptorSetLayoutBinding descLayoutBindingTex{
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = static_cast<uint32_t>(textures.size()),
-        .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
-    };
-    VkDescriptorSetLayoutCreateInfo descLayoutTexCI{
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = &descBindingFlags,
-        .bindingCount = 1,
-        .pBindings = &descLayoutBindingTex
-    };
-    chk(vkCreateDescriptorSetLayout(device, &descLayoutTexCI, nullptr, &descriptorSetLayoutTex));
-
-    // descriptor pool
-    VkDescriptorPoolSize poolSize{
-        .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .descriptorCount = static_cast<uint32_t>(textures.size())
-    };
-    VkDescriptorPoolCreateInfo descPoolCI{
-        .sType =VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .maxSets =1,
-        .poolSizeCount =1,
-        .pPoolSizes = &poolSize
-    };
-    chk(vkCreateDescriptorPool(device, &descPoolCI, nullptr, &descriptorPool));
-
-    // alokowania descriptor setu z tego pool'a
-    uint32_t variableDescCount{static_cast<uint32_t>(textures.size())};
-    VkDescriptorSetVariableDescriptorCountAllocateInfo variableDescCountAI{
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT,
-        .descriptorSetCount =1,
-        .pDescriptorCounts = &variableDescCount
-    };
-    VkDescriptorSetAllocateInfo texDescSetAlloc{
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .pNext = &variableDescCountAI,
-        .descriptorPool = descriptorPool,
-        .descriptorSetCount = 1,
-        .pSetLayouts = &descriptorSetLayoutTex
-    };
-    chk(vkAllocateDescriptorSets(device, &texDescSetAlloc, &descriptorSetTex));
-
-    // descriptor set ma niezainicjalizowane dane i trzeba je zainicjalizować
-    VkWriteDescriptorSet writeDescSet{
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = descriptorSetTex,
-        .dstBinding = 0,
-        .descriptorCount = static_cast<uint32_t>(textures.size()),
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .pImageInfo = textureDescriptors.data()
-    };
-    vkUpdateDescriptorSets(device, 1, &writeDescSet, 0, nullptr);
-
-    // LOADING SHADERS =====================================================
-    
-    // kumpilowanie slanga do SPIR-V w runtimie :D
-    // SPIR-V to taki pośredniczący język shaderów który vulkan umie czytać. 
-    // GLSL też do niego najpierw sie kompiluje.
-
-    // tworzenie globalnej sesji
-    slang::createGlobalSession(slangGlobalSession.writeRef());
-    
-    // tworzenie takiej o sesji xd
-    auto slangTargets{ std::to_array<slang::TargetDesc>({ {
-        .format{SLANG_SPIRV},
-        .profile{slangGlobalSession->findProfile("spirv_1_4")}
-    } })};
-    auto slangOptions{std::to_array<slang::CompilerOptionEntry>({ {
-        slang::CompilerOptionName::EmitSpirvDirectly,
-        {slang::CompilerOptionValueKind::Int, 1}
-    } })};
-    slang::SessionDesc slangSessionDesc{
-        .targets{slangTargets.data()},
-        .targetCount{SlangInt(slangTargets.size())},
-        .defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR,
-        .compilerOptionEntries{slangOptions.data()},
-        .compilerOptionEntryCount{uint32_t(slangOptions.size())}
-    };
-    Slang::ComPtr<slang::ISession> slangSession;
-    slangGlobalSession->createSession(slangSessionDesc, slangSession.writeRef());
-
-    // loading texture shader
-    Slang::ComPtr<slang::IModule> slangModule{
-        slangSession->loadModuleFromSource("triangle", "assets/shader.slang", nullptr, nullptr)
-    };
-    Slang::ComPtr<ISlangBlob> spirv;
-    slangModule->getTargetCode(0, spirv.writeRef());
-
-    // tworzenie modułu shadera (kontener na skompilowany SPRI-V)
-    VkShaderModuleCreateInfo shaderModuleCI{
-        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = spirv->getBufferSize(),
-        .pCode = (uint32_t*)spirv->getBufferPointer()
-    };
-    VkShaderModule shaderModule{};
-    chk(vkCreateShaderModule(device, &shaderModuleCI, nullptr, &shaderModule));
-
-    /* To do nowszej wersji vulkana
-    The VK_KHR_maintenance5 extension, which became core with 
-    Vulkan 1.4, deprecated shader modules. It allows direct 
-    passing of VkShaderModuleCreateInfo to the pipeline's 
-    shader stage create info.
-    */
-
-    // THE SHADER =============================================
-
-    // (pacz shader w assetach)
-
-    // GRAPHISC PIPELINE =========================================
-
-    // pipeline stages objects
-    // zwykle nie są dynamic(oprócz viewport, scissor), ale za pomocą rzszerzeń mogą być
-
-    /*
-    Vulkan supports pipeline types specific to use cases like 
-    graphics, compute, and raytracing. As such, setting up a 
-    pipeline depends on what we want to achieve. In our case, 
-    that's graphics (aka rasterization), so we'll be creating 
-    a graphics pipeline.
-    */
-
-    // First we create a pipeline layout. 
-    // This defines the interface between the pipeline and 
-    // our shaders. Pipeline layouts are separate objects as 
-    // you can mix and match them for use with other pipelines
-    VkPushConstantRange pushConstantRange{
-        .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-        .size = sizeof(VkDeviceAddress)
-    };
-    VkPipelineLayoutCreateInfo pipelineLayoutCI{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = 1,
-        .pSetLayouts = &descriptorSetLayoutTex,
-        .pushConstantRangeCount = 1,
-        .pPushConstantRanges = &pushConstantRange
-    };
-    chk(vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &pipelineLayout));
-
-    // layout of the vertex data
-    VkVertexInputBindingDescription vertexBinding{
-        .binding = 0,
-        .stride = sizeof(Vertex),
-        .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-    };
-
-    std::vector<VkVertexInputAttributeDescription> vertexAttributes{
-        {.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT },
-        {.location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset  = offsetof(Vertex, normal) },
-        {.location = 2, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset  = offsetof(Vertex, uv) },
-    };
-
-    /*
-    Another option for accessing vertices in the shader is buffer 
-    device address. That way we would skip the traditional vertex 
-    attributes and manually fetch them in the shader using pointers. That's called "vertex pulling". On some devices that can be slower though, so we stick with the traditional way.
-    */
-
-    VkPipelineVertexInputStateCreateInfo vertexInputState{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount = 1,
-        .pVertexBindingDescriptions = &vertexBinding,
-        .vertexAttributeDescriptionCount = static_cast<uint32_t>(vertexAttributes.size()),
-        .pVertexAttributeDescriptions = vertexAttributes.data()
-    };
-
-    //primitives
-    VkPipelineInputAssemblyStateCreateInfo inputAssemblyState {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
-    };
-
-    // podłaćzenie shaderów do pipeline'a
-    std::vector<VkPipelineShaderStageCreateInfo> shaderStages{
-        {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-         .stage = VK_SHADER_STAGE_VERTEX_BIT,
-         .module = shaderModule, .pName = "main" },
-        {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-         .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-         .module = shaderModule, .pName = "main" }
-    };  
-
-    /*
-    If you'd wanted to use different shaders 
-    (or shader combinations), you'd have to create multiple 
-    pipelines. The VK_EXT_shader_objects makes those shader 
-    stages into separate objects and adds more flexibility 
-    to this part of the API.
-    */
-
-    //viewport (dynamic - nie trzeba recreate pipeline kiedy się zmienią)
-    VkPipelineViewportStateCreateInfo viewportState{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-        .viewportCount =1,
-        .scissorCount =1
-    };
-    std::vector<VkDynamicState> dynamicStates{ VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-    VkPipelineDynamicStateCreateInfo dynamicState{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-        .dynamicStateCount = 2,
-        .pDynamicStates = dynamicStates.data()
-    };
-
-    //depth settings
-    VkPipelineDepthStencilStateCreateInfo depthStencilState{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .depthTestEnable = VK_TRUE,
-        .depthWriteEnable = VK_TRUE,
-        .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL
-    };
-
-    //dynamic rendering zamiast render pass objects :DDD
-    VkPipelineRenderingCreateInfo renderingCI{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-        .colorAttachmentCount =1,
-        .pColorAttachmentFormats = &imageFormat,
-        .depthAttachmentFormat =depthFormat
-    };
-
-    //nie będzie to używane ale trzeba to uspecyfikować jakimiś domyślnymi wartościami
-    VkPipelineColorBlendAttachmentState blendAttachment{
-        .colorWriteMask = 0xF
-    };
-    VkPipelineColorBlendStateCreateInfo colorBlendState{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-        .attachmentCount = 1,
-        .pAttachments = &blendAttachment
-    };
-    VkPipelineRasterizationStateCreateInfo rasterizationState{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-        .lineWidth = 1.0f
-    };
-    VkPipelineMultisampleStateCreateInfo multisampleState{
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT
-    };
-
-    //creating pipeline :DDD
-    VkGraphicsPipelineCreateInfo pipelineCI{
-        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext = &renderingCI,
-        .stageCount = 2,
-        .pStages = shaderStages.data(),
-        .pVertexInputState = &vertexInputState,
-        .pInputAssemblyState = &inputAssemblyState,
-        .pViewportState = &viewportState,
-        .pRasterizationState = &rasterizationState,
-        .pMultisampleState = &multisampleState,
-        .pDepthStencilState = &depthStencilState,
-        .pColorBlendState = &colorBlendState,
-        .pDynamicState = &dynamicState,
-        .layout = pipelineLayout
-    };
-    chk(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCI, nullptr, &pipeline));
-
-
-    // RENDER LOOP =============================================
-    // :DD
 
     uint64_t lastTime{ SDL_GetTicks() };
     bool quit{ false };
     while (!quit) {
         // Wait on fence ********************************
         //czekanie na to aż gpu skończy wykonywać poprzedni commandbuffer
-        chk(vkWaitForFences(device, 1, &fences[frameIndex], true, UINT64_MAX));
-        chk(vkResetFences(device, 1, &fences[frameIndex]));
+        chk(vkWaitForFences(mppDevice.getLogicalDevice(), 1, &fences[frameIndex], true, UINT64_MAX));
+        chk(vkResetFences(mppDevice.getLogicalDevice(), 1, &fences[frameIndex]));
 
         // Acquire next image ********************************
-        chkSwapchain(vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, imageAcquiredSemaphores[frameIndex], VK_NULL_HANDLE, &imageIndex));
+        chkSwapchain(vkAcquireNextImageKHR(mppDevice.getLogicalDevice(), swapchain, UINT64_MAX, imageAcquiredSemaphores[frameIndex], VK_NULL_HANDLE, &imageIndex));
 
         // Update shader data ********************************
         shaderData.projection = glm::perspective(glm::radians(45.0f), (float)windowSize.x / (float)windowSize.y, 0.1f, 32.0f);
@@ -689,7 +274,7 @@ App::App(/* args */)
             .signalSemaphoreInfoCount = 1,
             .pSignalSemaphoreInfos = &signalSemaphoreInfo
         };
-        chk(vkQueueSubmit2(queue, 1, &submitInfo, fences[frameIndex]));
+        chk(vkQueueSubmit2(mppDevice.getQueue(), 1, &submitInfo, fences[frameIndex]));
         
         /*
         The wait semaphore in pWaitSemaphoreInfos ensures 
@@ -736,45 +321,56 @@ App::App(/* args */)
         lastTime = SDL_GetTicks();
         for (SDL_Event event; SDL_PollEvent(&event);)
         {
-            //exit loop if ablication is about to close
-            if(event.type == SDL_EVENT_QUIT)
+            switch (event.type)
             {
-                quit = true;
-                break;
-            }
-
-            //Rotate the selected object with mouse drag
-            if (event.type == SDL_EVENT_MOUSE_MOTION) 
-            {
-                if(event.button.button == SDL_BUTTON_LEFT) 
+                //exit loop if aplication is about to close
+                case SDL_EVENT_QUIT:
                 {
-                    objectRotations[shaderData.selected].x -= (float)event.motion.yrel * elapsedTime;
-                    objectRotations[shaderData.selected].y += (float)event.motion.xrel * elapsedTime;
+                    quit = true;
+                    break;
                 }
-            }
 
-            // Zooming with the mouse wheel
-            if (event.type == SDL_EVENT_MOUSE_WHEEL)
-            {
-                camPos.z += (float)event.wheel.y * elapsedTime * 10.0f;
-            }
-
-            // Select active model instance
-            if (event.type == SDL_EVENT_KEY_DOWN) {
-                if (event.key.key == SDLK_PLUS || event.key.key == SDLK_KP_PLUS)
+                //Rotate the selected object with mouse drag
+                case SDL_EVENT_MOUSE_MOTION:
                 {
-                    shaderData.selected = (shaderData.selected < 2) ? shaderData.selected + 1 : 0;
+                    if(event.button.button == SDL_BUTTON_LEFT) 
+                    {
+                        objectRotations[shaderData.selected].x -= (float)event.motion.yrel * elapsedTime;
+                        objectRotations[shaderData.selected].y += (float)event.motion.xrel * elapsedTime;
+                    }
+                    break;
                 }
-                if (event.key.key == SDLK_MINUS || event.key.key == SDLK_KP_MINUS)
-                {
-                    shaderData.selected = (shaderData.selected > 0) ? shaderData.selected - 1 : 2;
-                }
-            }
 
-            //window resize
-            if (event.type == SDL_EVENT_WINDOW_RESIZED)
-            {
-                updateSwapchain = true;
+                // Zooming with the mouse wheel
+                case SDL_EVENT_MOUSE_WHEEL:
+                {
+                    camPos.z += (float)event.wheel.y * elapsedTime * 10.0f;
+                    break;
+                }
+
+                // Select active model instance
+                case SDL_EVENT_KEY_DOWN:
+                {
+                    if (event.key.key == SDLK_PLUS || event.key.key == SDLK_KP_PLUS)
+                    {
+                        shaderData.selected = (shaderData.selected < 2) ? shaderData.selected + 1 : 0;
+                    }
+                    if (event.key.key == SDLK_MINUS || event.key.key == SDLK_KP_MINUS)
+                    {
+                        shaderData.selected = (shaderData.selected > 0) ? shaderData.selected - 1 : 2;
+                    }
+                    break;
+                }
+
+                //window resize
+                case SDL_EVENT_WINDOW_RESIZED:
+                {
+                    updateSwapchain = true;
+                    break;
+                }
+            
+                default:
+                    break;
             }
         }
 
@@ -785,21 +381,21 @@ App::App(/* args */)
             chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
 
             updateSwapchain = false;
-            chk(vkDeviceWaitIdle(device));//czekanie aż gpu skończy działać
+            chk(vkDeviceWaitIdle(mppDevice.getLogicalDevice()));//czekanie aż gpu skończy działać
             
-            chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(devices[deviceIndex], surface, &surfaceCaps));
+            chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mppDevice.getPhysicalDevice(), mppWindow.getSurface(), &mppWindow.getSurfaceCaps()));
             swapchainCI.oldSwapchain = swapchain;
             swapchainCI.imageExtent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y)};
-            chk(vkCreateSwapchainKHR(device, &swapchainCI, nullptr, &swapchain));
+            chk(vkCreateSwapchainKHR(mppDevice.getLogicalDevice(), &swapchainCI, nullptr, &swapchain));
 
             for(auto i = 0; i< imageCount; i++)
             {
-                vkDestroyImageView(device, swapchainImageViews[i], nullptr);
+                vkDestroyImageView(mppDevice.getLogicalDevice(), swapchainImageViews[i], nullptr);
             }
 
-            chk(vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr));
+            chk(vkGetSwapchainImagesKHR(mppDevice.getLogicalDevice(), swapchain, &imageCount, nullptr));
             swapchainImages.resize(imageCount);
-            chk(vkGetSwapchainImagesKHR(device, swapchain, &imageCount, swapchainImages.data()));
+            chk(vkGetSwapchainImagesKHR(mppDevice.getLogicalDevice(), swapchain, &imageCount, swapchainImages.data()));
             
             swapchainImageViews.resize(imageCount);
 
@@ -812,30 +408,30 @@ App::App(/* args */)
                     .format = imageFormat,
                     .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1}
                 };
-                chk(vkCreateImageView(device, &viewCI, nullptr, &swapchainImageViews[i]));
+                chk(vkCreateImageView(mppDevice.getLogicalDevice(), &viewCI, nullptr, &swapchainImageViews[i]));
             }
 
             for(auto& semaphore : renderCompleteSemaphores)
             {
-                vkDestroySemaphore(device, semaphore, nullptr);
+                vkDestroySemaphore(mppDevice.getLogicalDevice(), semaphore, nullptr);
             }
             renderCompleteSemaphores.resize(imageCount);
             for(auto& semaphore : renderCompleteSemaphores)
             {
-                chk(vkCreateSemaphore(device, &semaphoreCI, nullptr, &semaphore));
+                chk(vkCreateSemaphore(mppDevice.getLogicalDevice(), &semaphoreCI, nullptr, &semaphore));
             }
 
-            vkDestroySwapchainKHR(device, swapchainCI.oldSwapchain, nullptr);
+            vkDestroySwapchainKHR(mppDevice.getLogicalDevice(), swapchainCI.oldSwapchain, nullptr);
             
-            vmaDestroyImage(allocator, depthImage, depthImageAllocation);
-            vkDestroyImageView(device, depthImageView, nullptr);
+            vmaDestroyImage(mppDevice.getAllocator(), depthImage, depthImageAllocation);
+            vkDestroyImageView(mppDevice.getLogicalDevice(), depthImageView, nullptr);
 
             depthImageCI.extent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y), .depth = 1 };
             VmaAllocationCreateInfo allocCI{
                 .flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
                 .usage = VMA_MEMORY_USAGE_AUTO
             };
-            chk(vmaCreateImage(allocator, &depthImageCI, &allocCI, &depthImage, &depthImageAllocation, nullptr));
+            chk(vmaCreateImage(mppDevice.getAllocator(), &depthImageCI, &allocCI, &depthImage, &depthImageAllocation, nullptr));
             
             VkImageViewCreateInfo viewCI{
                 .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -844,70 +440,29 @@ App::App(/* args */)
                 .format = depthFormat,
                 .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 1}
             };
-            chk(vkCreateImageView(device, &viewCI, nullptr, &depthImageView));
+            chk(vkCreateImageView(mppDevice.getLogicalDevice(), &viewCI, nullptr, &depthImageView));
         }
     }
 
     // CLEANING UP ===========================================
 
-    chk(vkDeviceWaitIdle(device));
+    chk(vkDeviceWaitIdle(mppDevice.getLogicalDevice()));
 
-	for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) 
-    {
-		vkDestroyFence(device, fences[i], nullptr);
-		vkDestroySemaphore(device, imageAcquiredSemaphores[i], nullptr);
-		vmaDestroyBuffer(allocator, shaderDataBuffers[i].buffer, shaderDataBuffers[i].allocation);
-	}
 
-	for (auto i = 0; i < renderCompleteSemaphores.size(); i++) 
-    {
-		vkDestroySemaphore(device, renderCompleteSemaphores[i], nullptr);
-	}
-
-	vmaDestroyImage(allocator, depthImage, depthImageAllocation);
-	vkDestroyImageView(device, depthImageView, nullptr);
-
-	for (auto i = 0; i < swapchainImageViews.size(); i++) 
-    {
-		vkDestroyImageView(device, swapchainImageViews[i], nullptr);
-	}
-
-	vmaDestroyBuffer(allocator, vBuffer, vBufferAllocation);
-
-	for (auto i = 0; i < textures.size(); i++) 
-    {
-		vkDestroyImageView(device, textures[i].view, nullptr);
-		vkDestroySampler(device, textures[i].sampler, nullptr);
-		vmaDestroyImage(allocator, textures[i].image, textures[i].allocation);
-	}
-
-	vkDestroyDescriptorSetLayout(device, descriptorSetLayoutTex, nullptr);
-	vkDestroyDescriptorPool(device, descriptorPool, nullptr);
-	vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-	vkDestroyPipeline(device, pipeline, nullptr);
-	vkDestroySwapchainKHR(device, swapchain, nullptr);
-	vkDestroySurfaceKHR(instance, surface, nullptr);
-	vkDestroyCommandPool(device, commandPool, nullptr);
-	vkDestroyShaderModule(device, shaderModule, nullptr);
-	vmaDestroyAllocator(allocator);
+	vkDestroyDescriptorSetLayout(mppDevice.getLogicalDevice(), descriptorSetLayoutTex, nullptr);
+	vkDestroyDescriptorPool(mppDevice.getLogicalDevice(), descriptorPool, nullptr);
+	vkDestroyPipelineLayout(mppDevice.getLogicalDevice(), pipelineLayout, nullptr);
+	vkDestroyPipeline(mppDevice.getLogicalDevice(), pipeline, nullptr);
+	vkDestroySwapchainKHR(mppDevice.getLogicalDevice(), swapchain, nullptr);
+	vkDestroySurfaceKHR(mppDevice.getInstance(), mppWindow.getSurface(), nullptr);
+	vkDestroyCommandPool(mppDevice.getLogicalDevice(), commandPool, nullptr);
+	vkDestroyShaderModule(mppDevice.getLogicalDevice(), shaderModule, nullptr);
+	vmaDestroyAllocator(mppDevice.getAllocator());
 	SDL_DestroyWindow(window);
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 	SDL_Quit();
-	vkDestroyDevice(device, nullptr);
-	vkDestroyInstance(instance, nullptr);
-
-
-
-}
-
-App::~App()
-{
-
-}
-
-void App::run()
-{
-
+	vkDestroyDevice(mppDevice.getLogicalDevice(), nullptr);
+	vkDestroyInstance(mppDevice.getInstance(), nullptr);
 }
 
 

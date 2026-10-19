@@ -99,7 +99,6 @@ void MppSwapChain::createDepthAttachment()
 
     // pobieramy formaty i jak wyłapiemy format depth to go zapisujemy
     std::vector<VkFormat> depthFormatList{VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT};
-    VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
     for ( VkFormat& format : depthFormatList ){
         VkFormatProperties2 formatProperties{.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2};
         vkGetPhysicalDeviceFormatProperties2(mppDevice.getPhysicalDevice(), format, &formatProperties);

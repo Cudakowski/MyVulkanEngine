@@ -1,6 +1,9 @@
 #pragma once
 
 #include "mpp_model.hpp"
+#include "mpp_texture.hpp"
+
+#include <unordered_map>
 
 namespace mpp
 {
@@ -17,6 +20,7 @@ public:
     using Map = std::unordered_map<id_t, MppGameObject>;
 
     std::shared_ptr<MppModel> model{};
+    std::shared_ptr<MppTexture> texture{};
 
     static MppGameObject createGameObject()
     {

@@ -6,6 +6,7 @@
 #include "mpp_renderer.hpp"
 #include "mpp_loader.hpp"
 #include "mpp_game_object.hpp"
+#include "mpp_texture.hpp"
 
 #define VOLK_IMPLEMENTATION
 #include <vulkan/vulkan.h>
@@ -44,19 +45,6 @@ class App
 {
 private:
 
-    struct Texture {
-        VmaAllocation allocation{ VK_NULL_HANDLE };
-        VkImage image{ VK_NULL_HANDLE };
-        VkImageView view{ VK_NULL_HANDLE };
-        VkSampler sampler{ VK_NULL_HANDLE };
-    };
-    std::array<Texture, 3> textures{};
-    VkDescriptorSetLayout descriptorSetLayoutTex{ VK_NULL_HANDLE};
-    VkDescriptorPool descriptorPool{ VK_NULL_HANDLE };
-    VkDescriptorSet descriptorSetTex{VK_NULL_HANDLE};
-    Slang::ComPtr<slang::IGlobalSession> slangGlobalSession;
-    VkPipelineLayout pipelineLayout{ VK_NULL_HANDLE };
-    VkPipeline pipeline{ VK_NULL_HANDLE };
     uint32_t frameIndex{0};
     
     uint32_t imageIndex{0};
@@ -79,14 +67,14 @@ private:
     MppDevice mppDevice{};
     MppWindow mppWindow{mppDevice, "Ale jak to vulkan", 1280, 720};
     MppRenderer mppRenderer{mppDevice,mppWindow};
-    MppLoader mppLoader{};
+    MppLoader mppLoader{mppDevice};
 
     MppGameObject::Map gameOjects;
 
     void loadGameObjects();
 
 public:
-    App(/* args */);
+    App();
     ~App();
 
     void run();

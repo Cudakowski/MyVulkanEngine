@@ -27,6 +27,9 @@ public:
     MppRenderer(MppDevice& device, MppWindow& window);
     ~MppRenderer();
 
+    const VkFormat& getSwapChainImageFormat(){return mppSwapChain->getImageFormat();}
+    VkFormat getSwapChainDepthFormat(){return mppSwapChain->getDepthFormat();}
+
     MppRenderer(const MppRenderer&) = delete;
     MppRenderer& operator=(const MppRenderer&) = delete;
 

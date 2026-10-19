@@ -45,6 +45,7 @@ private:
     std::vector<VkSemaphore> renderCompleteSemaphores;
 
     const VkFormat imageFormat{VK_FORMAT_B8G8R8A8_SRGB };
+    VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
 
     void createSwapChain();
     void createImageViews();
@@ -55,6 +56,34 @@ private:
 
 public:
     MppSwapChain(MppDevice &device, MppWindow &window);
+
+    const VkFormat& getImageFormat(){return imageFormat;}
+    VkFormat getDepthFormat(){return depthFormat;}
+
+    ~MppSwapChain()
+    {
+        for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) 
+        {
+            vkDestroyFence(mppDevice.getLogicalDevice(), fences[i], nullptr);
+            vkDestroySemaphore(mppDevice.getLogicalDevice(), imageAcquiredSemaphores[i], nullptr);
+            vmaDestroyBuffer(mppDevice.getAllocator(), shaderDataBuffers[i].buffer, shaderDataBuffers[i].allocation);
+        }
+
+        for (auto i = 0; i < renderCompleteSemaphores.size(); i++) 
+        {
+            vkDestroySemaphore(mppDevice.getLogicalDevice(), renderCompleteSemaphores[i], nullptr);
+        }
+
+        vmaDestroyImage(mppDevice.getAllocator(), depthImage, depthImageAllocation);
+        vkDestroyImageView(mppDevice.getLogicalDevice(), depthImageView, nullptr);
+
+        for (auto i = 0; i < swapchainImageViews.size(); i++) 
+        {
+            vkDestroyImageView(mppDevice.getLogicalDevice(), swapchainImageViews[i], nullptr);
+        }
+
+        
+    }
 };
 
 

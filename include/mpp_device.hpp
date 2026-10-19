@@ -44,8 +44,9 @@ public:
     VkPhysicalDevice getPhysicalDevice(){return devices[deviceIndex];}
     VkDevice getLogicalDevice(){return device;}
     VmaAllocator getAllocator(){return allocator;}
-    uint32_t gatQueueFamily(){return queueFamily;}
+    uint32_t getQueueFamily(){return queueFamily;}
     VkCommandPool getCommandPool(){return commandPool;}
+    VkQueue getQueue(){ return queue;};
 
 };
     

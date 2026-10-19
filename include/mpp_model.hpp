@@ -28,6 +28,10 @@ public:
     };
 
     MppModel(MppDevice& device, const std::vector<Vertex>& vertices, const std::vector<uint16_t>& indices);
+    ~MppModel()
+    {
+        vmaDestroyBuffer(mppDevice.getAllocator(), vBuffer, vBufferAllocation);
+    }
 };
 
 
