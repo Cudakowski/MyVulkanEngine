@@ -5,6 +5,32 @@
 namespace mpp
 {
 
+MppSwapChain::MppSwapChain(MppDevice &device, MppWindow &window, std::shared_ptr<MppSwapChain> previous): mppDevice{device}, mppWindow{window}, oldSwapChain{previous}
+{
+    createSwapChain();
+
+    for(auto i = 0; i< imageCount; i++)
+    {
+        vkDestroyImageView(mppDevice.getLogicalDevice(), swapchainImageViews[i], nullptr);
+    }
+
+    createImageViews();
+    createShaderDataBuffers();
+    
+    for(auto& semaphore : renderCompleteSemaphores)
+    {
+        vkDestroySemaphore(mppDevice.getLogicalDevice(), semaphore, nullptr);
+    }
+    createSynchronizationObjects();
+    
+    vkDestroySwapchainKHR(mppDevice.getLogicalDevice(), oldSwapChain->swapchain, nullptr);
+    vmaDestroyImage(mppDevice.getAllocator(), depthImage, depthImageAllocation);
+    vkDestroyImageView(mppDevice.getLogicalDevice(), depthImageView, nullptr);
+    
+    createDepthAttachment();
+    createCommandBuffers();
+}
+
 MppSwapChain::MppSwapChain(MppDevice &device, MppWindow &window): mppDevice{device}, mppWindow{window}
 {
     createSwapChain();
@@ -118,6 +144,7 @@ MppSwapChain::~MppSwapChain()
         vkDestroyImageView(mppDevice.getLogicalDevice(), swapchainImageViews[i], nullptr);
     }
 
+	vkDestroySwapchainKHR(mppDevice.getLogicalDevice(), swapchain, nullptr);
     
 }
 
@@ -281,6 +308,9 @@ void MppSwapChain::createSwapChain()
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         .presentMode = VK_PRESENT_MODE_FIFO_KHR//v-sync
     };
+
+    swapchainCI.oldSwapchain = oldSwapChain == nullptr ? VK_NULL_HANDLE : oldSwapChain->swapchain;
+
     chk(vkCreateSwapchainKHR(mppDevice.getLogicalDevice(), &swapchainCI, nullptr, &swapchain));
     
     /*
@@ -295,7 +325,6 @@ void MppSwapChain::createSwapChain()
 void MppSwapChain::createImageViews()
 {
     // pobieranie liczby images i resizowanie wektora z images
-    uint32_t imageCount{ 0 };
     chk(vkGetSwapchainImagesKHR(mppDevice.getLogicalDevice(), swapchain, &imageCount, nullptr));
     swapchainImages.resize(imageCount);
     // teraz pobieranie images oraz zmienianie wielkości wektora na views

@@ -24,7 +24,6 @@ namespace mpp
 class MppRenderer 
 {
 private:
-    bool updateSwapchain{ false };
 
     MppDevice& mppDevice;
     MppWindow& mppWindow;
@@ -33,17 +32,9 @@ private:
     std::vector<VkCommandBuffer> commandBuffers;
 
     uint32_t imageIndex{0};
+    void recreateSwapChain();
 
-    // static inline void chkSwapchain(VkResult result) {
-    //     if (result < VK_SUCCESS) {
-    //         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-    //             updateSwapchain = true;
-    //             return;
-    //         }
-    //         std::cerr << "Vulkan call returned an error (" << result << ")\n";
-    //         exit(result);
-    //     }
-    // }
+
 
 public:
 

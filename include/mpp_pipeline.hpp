@@ -28,6 +28,12 @@ private:
 public:
 
     MppPipeline(MppDevice& device, MppLoader& loader, MppRenderer& renderer);
+    ~MppPipeline()
+    {
+	    vkDestroyPipelineLayout(mppDevice.getLogicalDevice(), pipelineLayout, nullptr);
+	    vkDestroyPipeline(mppDevice.getLogicalDevice(), pipeline, nullptr);
+
+    }
 
     void bind(VkCommandBuffer commandBuffer);
     VkPipelineLayout getPipelineLayout(){return pipelineLayout;}

@@ -28,7 +28,10 @@ MppDevice::MppDevice()
 
 MppDevice::~MppDevice()
 {
-    
+	vkDestroyCommandPool(device, commandPool, nullptr);
+	vmaDestroyAllocator(allocator);
+    vkDestroyDevice(device, nullptr);
+	vkDestroyInstance(instance, nullptr);
 }
 
 void MppDevice::createCommandPool()

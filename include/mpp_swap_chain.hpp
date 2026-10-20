@@ -5,6 +5,7 @@
 #include "mpp_frame_info.hpp"
 
 #include <vector>
+#include <memory>
 
 namespace mpp
 {
@@ -19,6 +20,7 @@ private:
     VkExtent2D swapchainExtent;
 
     VkSwapchainKHR swapchain{ VK_NULL_HANDLE };// swapchain
+    std::shared_ptr<MppSwapChain> oldSwapChain;
     std::vector<VkImage> swapchainImages;
     std::vector<VkImageView> swapchainImageViews;
     VkImage depthImage;
@@ -44,6 +46,8 @@ private:
     
     uint32_t frameIndex{0};
 
+    uint32_t imageCount{ 0 };
+
     void createSwapChain();
     void createImageViews();
     void createDepthAttachment();
@@ -53,6 +57,7 @@ private:
 
 public:
     MppSwapChain(MppDevice &device, MppWindow &window);
+    MppSwapChain(MppDevice &device, MppWindow &window, std::shared_ptr<MppSwapChain> previous);
     ~MppSwapChain();
 
     const VkFormat& getImageFormat(){return imageFormat;}

@@ -27,11 +27,18 @@ private:
     VkSurfaceCapabilitiesKHR surfaceCaps{};
 
     MppDevice &mppDevice;
+    bool wasResized{false};
 
 public:
 
     MppWindow(MppDevice &device, std::string name, int width, int height);
-    ~MppWindow();
+    ~MppWindow()
+    {
+	    vkDestroySurfaceKHR(mppDevice.getInstance(), surface, nullptr);
+	    SDL_DestroyWindow(window);
+        SDL_QuitSubSystem(SDL_INIT_VIDEO);
+        SDL_Quit();
+    }
 
     MppWindow(const MppWindow&) = delete;
     MppWindow& operator=(const MppWindow&) = delete;
@@ -42,7 +49,14 @@ public:
     glm::ivec2 getWindowSize(){return windowSize;}
     VkExtent2D getExtent();
 
-
+    bool wasWindowResized(){return wasResized;}
+    void setResized(){wasResized=true;}
+    void resetResizedFlag()
+    {
+        wasResized=false;
+        chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
+        chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mppDevice.getPhysicalDevice() , surface, &surfaceCaps));
+    }
 };
 
 
