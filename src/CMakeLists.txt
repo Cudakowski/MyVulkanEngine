@@ -1,9 +1,10 @@
 
 set(SOURCES
-    main.cpp
     ../assets/shader.slang
     app.cpp
+    basic_render_system.cpp
     keyboard_movement_controller.cpp
+    main.cpp
     mpp_buffer.cpp
     mpp_camera.cpp
     mpp_checks.cpp
@@ -11,13 +12,15 @@ set(SOURCES
     mpp_device.cpp
     mpp_frame_info.cpp
     mpp_game_object.cpp
+    mpp_loader.cpp
     mpp_model.cpp
     mpp_pipeline.cpp
     mpp_renderer.cpp
     mpp_swap_chain.cpp
+    mpp_texture.cpp
     mpp_utils.cpp
     mpp_window.cpp
-    mpp_loader.cpp
+    external_impl.cpp
 )
 
 

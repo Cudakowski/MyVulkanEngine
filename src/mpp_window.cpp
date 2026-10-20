@@ -1,6 +1,5 @@
 #include "mpp_window.hpp"
 
-#include "mpp_checks.hpp"
 
 namespace mpp
 {

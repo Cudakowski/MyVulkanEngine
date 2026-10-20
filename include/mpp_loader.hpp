@@ -3,14 +3,11 @@
 #include "mpp_model.hpp"
 #include "mpp_texture.hpp"
 
-#define VOLK_IMPLEMENTATION
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
 #include <ktx.h>
 #include <ktxvulkan.h>
-#define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
-#define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
 #include "slang/slang.h"
 #include "slang/slang-com-ptr.h"

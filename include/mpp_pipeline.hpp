@@ -8,7 +8,6 @@
 
 #include "mpp_checks.hpp"
 
-#define VOLK_IMPLEMENTATION
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
 

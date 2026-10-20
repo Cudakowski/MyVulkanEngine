@@ -3,6 +3,7 @@
 #include "mpp_device.hpp"
 #include "mpp_window.hpp"
 #include "mpp_frame_info.hpp"
+#include "mpp_checks.hpp"
 
 #include <vector>
 #include <memory>

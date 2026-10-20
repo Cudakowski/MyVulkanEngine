@@ -8,13 +8,12 @@
 #include "mpp_game_object.hpp"
 #include "mpp_texture.hpp"
 #include "mpp_frame_info.hpp"
+#include "basic_render_system.hpp"
 
-#define VOLK_IMPLEMENTATION
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
-#define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -25,7 +24,6 @@
 #include "slang/slang-com-ptr.h"
 #include <ktx.h>
 #include <ktxvulkan.h>
-#define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
 

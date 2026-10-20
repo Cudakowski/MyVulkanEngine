@@ -8,7 +8,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/bin/Prot3",
+            "program": "${workspaceFolder}/build/bin/Prot4",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

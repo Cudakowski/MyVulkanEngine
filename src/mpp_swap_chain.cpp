@@ -1,6 +1,5 @@
 #include "mpp_swap_chain.hpp"
 
-#include "mpp_checks.hpp"
 
 namespace mpp
 {

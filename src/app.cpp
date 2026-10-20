@@ -1,6 +1,5 @@
 #include "app.hpp"
 
-#include "basic_render_system.hpp"
 
 namespace mpp
 {

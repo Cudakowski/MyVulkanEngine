@@ -3,7 +3,6 @@
 #include "mpp_device.hpp"
 
 #include <vulkan/vulkan.h>
-#define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
 
 namespace mpp

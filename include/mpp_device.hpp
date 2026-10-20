@@ -1,9 +1,9 @@
 #pragma once
 
-#define VOLK_IMPLEMENTATION
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
-#define VMA_IMPLEMENTATION
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 #include <vma/vk_mem_alloc.h>
 
 #include <vector>

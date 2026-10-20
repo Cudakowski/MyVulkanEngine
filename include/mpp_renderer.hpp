@@ -4,7 +4,6 @@
 #include "mpp_window.hpp"
 #include "mpp_swap_chain.hpp"
 
-#define VOLK_IMPLEMENTATION
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
 #define GLM_FORCE_RADIANS

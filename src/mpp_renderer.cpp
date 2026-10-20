@@ -20,7 +20,7 @@ VkCommandBuffer MppRenderer::beginFrame()
     if (result < VK_SUCCESS) {
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
             recreateSwapChain();
-            return;
+            return nullptr;
         }
         std::cerr << "Vulkan call returned an error (" << result << ")\n";
         exit(result);
