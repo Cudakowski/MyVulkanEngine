@@ -28,6 +28,9 @@ private:
 public:
 
     MppPipeline(MppDevice& device, MppLoader& loader, MppRenderer& renderer);
+
+    void bind(VkCommandBuffer commandBuffer);
+    VkPipelineLayout getPipelineLayout(){return pipelineLayout;}
 };
 
 

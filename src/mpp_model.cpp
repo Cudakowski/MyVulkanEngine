@@ -3,10 +3,10 @@
 namespace mpp
 {
 
-MppModel::MppModel(MppDevice& device, const std::vector<Vertex>& vertices, const std::vector<uint16_t>& indices): mppDevice{device}
+MppModel::MppModel(MppDevice& device, const std::vector<Vertex>& vertices, const std::vector<uint16_t>& indices, VkDeviceSize indCount): mppDevice{device}, indexCount{indCount}
 {
     // tworzenie buffera na vertex i index data
-    VkDeviceSize vBufSize{sizeof(MppModel::Vertex) * vertices.size()};
+    vBufSize = sizeof(MppModel::Vertex) * vertices.size();
     VkDeviceSize iBufSize{sizeof(uint16_t) * indices.size()};
     VkBufferCreateInfo bufferCI{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -32,6 +32,20 @@ MppModel::MppModel(MppDevice& device, const std::vector<Vertex>& vertices, const
     //kopiowanie danych do vramu
     memcpy(vBufferAllocInfo.pMappedData, vertices.data(), vBufSize);
     memcpy(((char*)vBufferAllocInfo.pMappedData) + vBufSize, indices.data(), iBufSize);
+}
+
+void MppModel::bind(VkCommandBuffer commandBuffer)
+{
+    //3D object data
+    VkDeviceSize vOffset{ 0 };
+    vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vBuffer, &vOffset);
+    vkCmdBindIndexBuffer(commandBuffer, vBuffer, vBufSize, VK_INDEX_TYPE_UINT16);
+}
+
+void MppModel::draw(VkCommandBuffer commandBuffer)
+{
+    //DRAW :DDDDD
+    vkCmdDrawIndexed(commandBuffer, indexCount, 3, 0, 0, 0);
 }
 
 } // namespace mpp

@@ -2,6 +2,7 @@
 
 #include "mpp_device.hpp"
 #include "mpp_window.hpp"
+#include "mpp_frame_info.hpp"
 
 #include <vector>
 
@@ -32,13 +33,7 @@ private:
     };
     std::array<ShaderDataBuffer, MAX_FRAMES_IN_FLIGHT> shaderDataBuffers;
     std::array<VkCommandBuffer, MAX_FRAMES_IN_FLIGHT> commandBuffers;
-    struct ShaderData{
-        glm::mat4 projection;
-        glm::mat4 view;
-        glm::mat4 model[3];
-        glm::vec4 lightPos{ 0.0f, -10.0f, 10.0f, 0.0f};
-        uint32_t selected{1};
-    } shaderData{};
+    
 
     std::array<VkFence, MAX_FRAMES_IN_FLIGHT> fences;
     std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> imageAcquiredSemaphores;
@@ -46,44 +41,35 @@ private:
 
     const VkFormat imageFormat{VK_FORMAT_B8G8R8A8_SRGB };
     VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
+    
+    uint32_t frameIndex{0};
 
     void createSwapChain();
     void createImageViews();
     void createDepthAttachment();
-    void createShaderAndDataBuffers();
+    void createShaderDataBuffers();
     void createSynchronizationObjects();
     void createCommandBuffers();
 
 public:
     MppSwapChain(MppDevice &device, MppWindow &window);
+    ~MppSwapChain();
 
     const VkFormat& getImageFormat(){return imageFormat;}
     VkFormat getDepthFormat(){return depthFormat;}
 
-    ~MppSwapChain()
-    {
-        for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) 
-        {
-            vkDestroyFence(mppDevice.getLogicalDevice(), fences[i], nullptr);
-            vkDestroySemaphore(mppDevice.getLogicalDevice(), imageAcquiredSemaphores[i], nullptr);
-            vmaDestroyBuffer(mppDevice.getAllocator(), shaderDataBuffers[i].buffer, shaderDataBuffers[i].allocation);
-        }
+    VkResult acquireNextImage(uint32_t& imageIndex);
+    VkResult submitCommandBuffer(VkCommandBuffer cb,uint32_t& imageIndex);
 
-        for (auto i = 0; i < renderCompleteSemaphores.size(); i++) 
-        {
-            vkDestroySemaphore(mppDevice.getLogicalDevice(), renderCompleteSemaphores[i], nullptr);
-        }
 
-        vmaDestroyImage(mppDevice.getAllocator(), depthImage, depthImageAllocation);
-        vkDestroyImageView(mppDevice.getLogicalDevice(), depthImageView, nullptr);
+    ShaderDataBuffer& getCurrentShaderDataBuffer(){return shaderDataBuffers[frameIndex];}
+    VkCommandBuffer getCurrentCommandBuffer(){return commandBuffers[frameIndex];}
 
-        for (auto i = 0; i < swapchainImageViews.size(); i++) 
-        {
-            vkDestroyImageView(mppDevice.getLogicalDevice(), swapchainImageViews[i], nullptr);
-        }
+    VkImage getCurrentSwapchainImage(uint32_t& imageIndex){return swapchainImages[imageIndex];}
+    VkImageView getCurrentSwapchainImageView(uint32_t& imageIndex){return swapchainImageViews[imageIndex];}
+    VkImage getDepthImage(){return depthImage;}
+    VkImageView getDepthImageView(){return depthImageView;}
 
-        
-    }
 };
 
 

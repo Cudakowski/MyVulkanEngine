@@ -10,9 +10,115 @@ MppSwapChain::MppSwapChain(MppDevice &device, MppWindow &window): mppDevice{devi
     createSwapChain();
     createImageViews();
     createDepthAttachment();
-    createShaderAndDataBuffers();
+    createShaderDataBuffers();
     createSynchronizationObjects();
     createCommandBuffers();
+}
+
+VkResult MppSwapChain::acquireNextImage(uint32_t& imageIndex)
+{
+    // Wait on fence ********************************
+    //czekanie na to aż gpu skończy wykonywać poprzedni commandbuffer
+    chk(vkWaitForFences(mppDevice.getLogicalDevice(), 1, &fences[frameIndex], true, UINT64_MAX));
+    chk(vkResetFences(mppDevice.getLogicalDevice(), 1, &fences[frameIndex]));
+
+    // Acquire next image ********************************
+    return vkAcquireNextImageKHR(mppDevice.getLogicalDevice(), swapchain, UINT64_MAX, imageAcquiredSemaphores[frameIndex], VK_NULL_HANDLE, &imageIndex);
+}
+
+VkResult MppSwapChain::submitCommandBuffer(VkCommandBuffer cb,uint32_t& imageIndex)
+{
+    // Submit command buffer ********************************
+
+    //submitowanie command buffera do queue
+    VkSemaphoreSubmitInfo waitSemaphoreInfo{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .semaphore = imageAcquiredSemaphores[frameIndex],
+        .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+    };
+    VkCommandBufferSubmitInfo commandBufferSubmitInfo{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .commandBuffer = cb
+    };
+    VkSemaphoreSubmitInfo signalSemaphoreInfo{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .semaphore = renderCompleteSemaphores[imageIndex],
+        .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+    };
+    VkSubmitInfo2 submitInfo{
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .waitSemaphoreInfoCount = 1,
+        .pWaitSemaphoreInfos = &waitSemaphoreInfo,
+        .commandBufferInfoCount = 1,
+        .pCommandBufferInfos = &commandBufferSubmitInfo,
+        .signalSemaphoreInfoCount = 1,
+        .pSignalSemaphoreInfos = &signalSemaphoreInfo
+    };
+    chk(vkQueueSubmit2(mppDevice.getQueue(), 1, &submitInfo, fences[frameIndex]));
+    
+    /*
+    The wait semaphore in pWaitSemaphoreInfos ensures 
+    that execution of the command buffer does not begin 
+    until the swapchain image we want to render to has 
+    been acquired. This means presentation has finished 
+    and the image has been released by the presentation 
+    engine. This is required because swapchain images 
+    are owned by the presentation engine rather than by 
+    our application. The stage specified in stageMask 
+    makes that wait happen at the color attachment output 
+    stage, so in theory the GPU may already begin work 
+    on earlier pipeline stages, such as vertex fetching. 
+    The signal semaphore in pSignalSemaphoreInfos, on 
+    the other hand, is signaled by the GPU once command 
+    buffer execution has completed and ensures that 
+    presentation does not begin until the command buffer 
+    has finished execution. Together, these guarantees 
+    prevent read/write hazards that could cause the GPU 
+    to read from or write to resources that are 
+    still in use.
+    */
+
+    //calculate index for the next loop iterationnnnnnnnnnn
+    frameIndex = (frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+
+
+    // Present image ********************************
+
+    //wstawianie na ekran :DDDD
+    VkPresentInfoKHR presentInfo{
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &renderCompleteSemaphores[imageIndex],
+        .swapchainCount = 1,
+        .pSwapchains = &swapchain,
+        .pImageIndices = &imageIndex
+    };
+    return vkQueuePresentKHR(mppDevice.getQueue(), &presentInfo);
+}
+
+MppSwapChain::~MppSwapChain()
+{
+    for (auto i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) 
+    {
+        vkDestroyFence(mppDevice.getLogicalDevice(), fences[i], nullptr);
+        vkDestroySemaphore(mppDevice.getLogicalDevice(), imageAcquiredSemaphores[i], nullptr);
+        vmaDestroyBuffer(mppDevice.getAllocator(), shaderDataBuffers[i].buffer, shaderDataBuffers[i].allocation);
+    }
+
+    for (auto i = 0; i < renderCompleteSemaphores.size(); i++) 
+    {
+        vkDestroySemaphore(mppDevice.getLogicalDevice(), renderCompleteSemaphores[i], nullptr);
+    }
+
+    vmaDestroyImage(mppDevice.getAllocator(), depthImage, depthImageAllocation);
+    vkDestroyImageView(mppDevice.getLogicalDevice(), depthImageView, nullptr);
+
+    for (auto i = 0; i < swapchainImageViews.size(); i++) 
+    {
+        vkDestroyImageView(mppDevice.getLogicalDevice(), swapchainImageViews[i], nullptr);
+    }
+
+    
 }
 
 void MppSwapChain::createCommandBuffers()
@@ -59,7 +165,7 @@ void MppSwapChain::createSynchronizationObjects()
 }
 
 
-void MppSwapChain::createShaderAndDataBuffers()
+void MppSwapChain::createShaderDataBuffers()
 {
     // CPU AND GPU PARALLELISM ========================================================
 

@@ -49,6 +49,7 @@ public:
     void loadShaders();
 
     VkDescriptorSetLayout& getDescriptorSetLayoutTex(){ return descriptorSetLayoutTex;};
+    VkDescriptorSet getDescriptorSetTex(){return descriptorSetTex;}
     VkShaderModule getShaderModule(){return shaderModule;};
 
     //std::vector<VkDescriptorImageInfo>& getTextureDescriptors(){return textureDescriptors;}

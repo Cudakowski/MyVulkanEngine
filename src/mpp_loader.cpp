@@ -351,7 +351,7 @@ std::unique_ptr<MppModel> MppLoader::createModelFromFile(const std::string& file
     Otherwise the model and the texture image would appear upside down.
     */
 
-    return std::make_unique<MppModel>(mppDevice, vertices, indices);
+    return std::make_unique<MppModel>(mppDevice, vertices, indices, indexCount);
 }
     
 } // namespace mpp

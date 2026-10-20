@@ -19,6 +19,8 @@ private:
     
     VkBuffer vBuffer{VK_NULL_HANDLE};
     VmaAllocation vBufferAllocation{VK_NULL_HANDLE};
+    VkDeviceSize vBufSize{};
+    const VkDeviceSize indexCount;
 
 public:
     struct Vertex {
@@ -27,11 +29,14 @@ public:
         glm::vec2 uv;
     };
 
-    MppModel(MppDevice& device, const std::vector<Vertex>& vertices, const std::vector<uint16_t>& indices);
+    MppModel(MppDevice& device, const std::vector<Vertex>& vertices, const std::vector<uint16_t>& indices, VkDeviceSize indCount);
     ~MppModel()
     {
         vmaDestroyBuffer(mppDevice.getAllocator(), vBuffer, vBufferAllocation);
     }
+
+    void bind(VkCommandBuffer commandBuffer);
+    void draw(VkCommandBuffer commandBuffer);
 };
 
 

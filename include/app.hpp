@@ -7,6 +7,7 @@
 #include "mpp_loader.hpp"
 #include "mpp_game_object.hpp"
 #include "mpp_texture.hpp"
+#include "mpp_frame_info.hpp"
 
 #define VOLK_IMPLEMENTATION
 #include <vulkan/vulkan.h>
@@ -39,29 +40,17 @@
 
 namespace mpp
 {
-    bool updateSwapchain{ false };
     
 class App
 {
 private:
 
-    uint32_t frameIndex{0};
     
-    uint32_t imageIndex{0};
     glm::vec3 camPos{0.0f, 0.0f, -6.0f};
     glm::vec3 objectRotations[3]{};
 
 
-    static inline void chkSwapchain(VkResult result) {
-        if (result < VK_SUCCESS) {
-            if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-                updateSwapchain = true;
-                return;
-            }
-            std::cerr << "Vulkan call returned an error (" << result << ")\n";
-            exit(result);
-        }
-    }
+    
 
 
     MppDevice mppDevice{};
@@ -69,7 +58,7 @@ private:
     MppRenderer mppRenderer{mppDevice,mppWindow};
     MppLoader mppLoader{mppDevice};
 
-    MppGameObject::Map gameOjects;
+    MppGameObject::Map gameObjects;
 
     void loadGameObjects();
 

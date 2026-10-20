@@ -28,7 +28,7 @@ public:
   BasicRenderSystem(const BasicRenderSystem &) = delete;
   BasicRenderSystem &operator=(const BasicRenderSystem &) = delete;
 
-  //void render(FrameInfo& frameInfo);
+  void render(FrameInfo& frameInfo);
 
 
 };
