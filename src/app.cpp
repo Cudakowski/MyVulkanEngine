@@ -135,7 +135,7 @@ void App::run()
                 //window resize
                 case SDL_EVENT_WINDOW_RESIZED:
                 {
-                    mppWindow.setResized();
+                    mppRenderer.requestRecreateSwapChain();
                     break;
                 }
             
@@ -143,6 +143,8 @@ void App::run()
                     break;
             }
         }
+
+        mppRenderer.conditionalRecreateSwapChain();
 
     }
 

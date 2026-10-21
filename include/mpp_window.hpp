@@ -49,12 +49,25 @@ public:
     glm::ivec2 getWindowSize(){return windowSize;}
     VkExtent2D getExtent();
 
-    bool wasWindowResized(){return wasResized;}
-    void setResized(){wasResized=true;}
-    void resetResizedFlag()
+    // bool wasWindowResized(){return wasResized;}
+    // void setResized(){wasResized=true;}
+    // void resetResizedFlag()
+    // {
+    //     wasResized=false;
+    //     chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
+    //     chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mppDevice.getPhysicalDevice() , surface, &surfaceCaps));
+    // }
+    
+    void updateWindowSize()
     {
-        wasResized=false;
         chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
+        while (windowSize.x == 0 || windowSize.y == 0)
+        {
+            SDL_Event event;
+            SDL_WaitEvent(&event);
+            chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
+        }
+        
         chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mppDevice.getPhysicalDevice() , surface, &surfaceCaps));
     }
 };

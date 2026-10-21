@@ -19,11 +19,13 @@ VkCommandBuffer MppRenderer::beginFrame()
     auto result = mppSwapChain->acquireNextImage(imageIndex);
     if (result < VK_SUCCESS) {
         if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-            recreateSwapChain();
-            return nullptr;
+            updateSwapchain = true;
         }
-        std::cerr << "Vulkan call returned an error (" << result << ")\n";
-        exit(result);
+        else
+        {
+            std::cerr << "Vulkan call returned an error (" << result << ")\n";
+            exit(result);
+        }
     }
 
     
@@ -207,13 +209,15 @@ void MppRenderer::endFrame(VkCommandBuffer cb)
     auto result = mppSwapChain->submitCommandBuffer(cb, imageIndex);
 
     if (result < VK_SUCCESS) {
-        if (result == VK_ERROR_OUT_OF_DATE_KHR || mppWindow.wasWindowResized()) {
-            mppWindow.resetResizedFlag();
-            recreateSwapChain();
-            return;
+        if (result == VK_ERROR_OUT_OF_DATE_KHR ) {
+            updateSwapchain = true;
         }
-        std::cerr << "Vulkan call returned an error (" << result << ")\n";
-        exit(result);
+        else
+        {
+            std::cerr << "Vulkan call returned an error (" << result << ")\n";
+            exit(result);
+
+        }
     }
 }
 
@@ -224,13 +228,17 @@ void MppRenderer::updateShaderData(ShaderData& shaderData)
 }
 
 
-void MppRenderer::recreateSwapChain()
+void MppRenderer::conditionalRecreateSwapChain()
 {
-    chk(vkDeviceWaitIdle(mppDevice.getLogicalDevice()));//czekanie aż gpu skończy działać
-    std::shared_ptr<MppSwapChain> oldSwapChain = std::move(mppSwapChain);
-    mppSwapChain = std::make_unique<MppSwapChain>(
-        mppDevice, mppWindow, oldSwapChain
-    );
+    if(updateSwapchain)
+    {
+        chk(vkDeviceWaitIdle(mppDevice.getLogicalDevice()));//czekanie aż gpu skończy działać
+        mppWindow.updateWindowSize();
+    
+        updateSwapchain = false;
+        mppSwapChain->recreate();
+
+    }
     
     
 }

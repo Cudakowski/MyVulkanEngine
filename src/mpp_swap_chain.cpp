@@ -4,30 +4,67 @@
 namespace mpp
 {
 
-MppSwapChain::MppSwapChain(MppDevice &device, MppWindow &window, std::shared_ptr<MppSwapChain> previous): mppDevice{device}, mppWindow{window}, oldSwapChain{previous}
+void MppSwapChain::recreate()
 {
-    createSwapChain();
+    
+    auto windowSize = mppWindow.getWindowSize();
+    swapchainCI.oldSwapchain = swapchain;
+    swapchainCI.imageExtent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y)};
+    chk(vkCreateSwapchainKHR(mppDevice.getLogicalDevice(), &swapchainCI, nullptr, &swapchain));
 
     for(auto i = 0; i< imageCount; i++)
     {
         vkDestroyImageView(mppDevice.getLogicalDevice(), swapchainImageViews[i], nullptr);
     }
 
-    createImageViews();
-    createShaderDataBuffers();
+    chk(vkGetSwapchainImagesKHR(mppDevice.getLogicalDevice(), swapchain, &imageCount, nullptr));
+    swapchainImages.resize(imageCount);
+    chk(vkGetSwapchainImagesKHR(mppDevice.getLogicalDevice(), swapchain, &imageCount, swapchainImages.data()));
     
+    swapchainImageViews.resize(imageCount);
+
+    for(auto i = 0; i< imageCount; i++)
+    {
+        VkImageViewCreateInfo viewCI{
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = swapchainImages[i],
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = imageFormat,
+            .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1}
+        };
+        chk(vkCreateImageView(mppDevice.getLogicalDevice(), &viewCI, nullptr, &swapchainImageViews[i]));
+    }
+
     for(auto& semaphore : renderCompleteSemaphores)
     {
         vkDestroySemaphore(mppDevice.getLogicalDevice(), semaphore, nullptr);
     }
-    createSynchronizationObjects();
+    renderCompleteSemaphores.resize(imageCount);
+    for(auto& semaphore : renderCompleteSemaphores)
+    {
+        chk(vkCreateSemaphore(mppDevice.getLogicalDevice(), &semaphoreCI, nullptr, &semaphore));
+    }
+
+    vkDestroySwapchainKHR(mppDevice.getLogicalDevice(), swapchainCI.oldSwapchain, nullptr);
     
-    vkDestroySwapchainKHR(mppDevice.getLogicalDevice(), oldSwapChain->swapchain, nullptr);
     vmaDestroyImage(mppDevice.getAllocator(), depthImage, depthImageAllocation);
     vkDestroyImageView(mppDevice.getLogicalDevice(), depthImageView, nullptr);
+
+    depthImageCI.extent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y), .depth = 1 };
+    VmaAllocationCreateInfo allocCI{
+        .flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        .usage = VMA_MEMORY_USAGE_AUTO
+    };
+    chk(vmaCreateImage(mppDevice.getAllocator(), &depthImageCI, &allocCI, &depthImage, &depthImageAllocation, nullptr));
     
-    createDepthAttachment();
-    createCommandBuffers();
+    VkImageViewCreateInfo viewCI{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = depthImage,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = depthFormat,
+        .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 1}
+    };
+    chk(vkCreateImageView(mppDevice.getLogicalDevice(), &viewCI, nullptr, &depthImageView));
 }
 
 MppSwapChain::MppSwapChain(MppDevice &device, MppWindow &window): mppDevice{device}, mppWindow{window}
@@ -172,7 +209,7 @@ void MppSwapChain::createSynchronizationObjects()
     // SYNCHRONIZATION OBJECTS =====================================================
 
     // fences, binary semaphores and pipeline barrirers
-    VkSemaphoreCreateInfo semaphoreCI{
+    semaphoreCI = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
     };
     VkFenceCreateInfo fenceCI{
@@ -241,7 +278,7 @@ void MppSwapChain::createDepthAttachment()
     }
 
     // info depth image
-    VkImageCreateInfo depthImageCI{
+    depthImageCI = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = depthFormat,
@@ -294,7 +331,7 @@ void MppSwapChain::createSwapChain()
 
     // info
     
-    VkSwapchainCreateInfoKHR swapchainCI{
+    swapchainCI = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = mppWindow.getSurface(),
         .minImageCount = mppWindow.getSurfaceCaps().minImageCount,

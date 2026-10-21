@@ -31,8 +31,7 @@ private:
     std::vector<VkCommandBuffer> commandBuffers;
 
     uint32_t imageIndex{0};
-    void recreateSwapChain();
-
+    bool updateSwapchain{false};
 
 
 public:
@@ -53,6 +52,8 @@ public:
     void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
     void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
     void updateShaderData(ShaderData& shaderData);
+    void conditionalRecreateSwapChain();
+    void requestRecreateSwapChain(){updateSwapchain = true;};
 
 };
 

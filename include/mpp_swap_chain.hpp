@@ -56,9 +56,13 @@ private:
     void createSynchronizationObjects();
     void createCommandBuffers();
 
+    VkSwapchainCreateInfoKHR swapchainCI{};
+    VkSemaphoreCreateInfo semaphoreCI{};
+    VkImageCreateInfo depthImageCI{};
+
 public:
     MppSwapChain(MppDevice &device, MppWindow &window);
-    MppSwapChain(MppDevice &device, MppWindow &window, std::shared_ptr<MppSwapChain> previous);
+    void recreate();
     ~MppSwapChain();
 
     const VkFormat& getImageFormat(){return imageFormat;}
