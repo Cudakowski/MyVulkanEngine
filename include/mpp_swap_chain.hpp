@@ -51,9 +51,9 @@ private:
 
 
     VkFormat findDepthFormat();
-    VkSurfaceFormatKHR MppSwapChain::chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR> &availableFormats);
-    VkPresentModeKHR MppSwapChain::chooseSwapPresentMode( const std::vector<VkPresentModeKHR> &availablePresentModes);
-    VkExtent2D MppSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
+    VkSurfaceFormatKHR chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR> &availableFormats);
+    VkPresentModeKHR chooseSwapPresentMode( const std::vector<VkPresentModeKHR> &availablePresentModes);
+    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
 
 public:
     MppSwapChain(MppDevice &device, VkExtent2D windowExtent);

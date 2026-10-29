@@ -45,7 +45,7 @@ private:
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     uint32_t deviceIndex{0};// defaultowo 0
 
-    VkDevice device{ VK_NULL_HANDLE };// logical device
+    VkDevice device_{ VK_NULL_HANDLE };// logical device
     VkSurfaceKHR surface;
     VkQueue graphicsQueue;
     VkQueue presentQueue;// kolejka z komendami(cammand buffer)
@@ -79,7 +79,7 @@ public:
 
     VkInstance getInstance(){return instance;}
     VkPhysicalDevice getPhysicalDevice(){return physicalDevice;}
-    VkDevice getLogicalDevice(){return device;}
+    VkDevice getLogicalDevice(){return device_;}
     VmaAllocator getAllocator(){return allocator;}
     VkCommandPool getRenderingCommandPool(){return renderingCommandPool;}
     VkCommandPool getTextureLoadingCommandPool(){return textureLoadingCommandPool;}
@@ -91,6 +91,7 @@ public:
     VkPhysicalDeviceProperties2 deviceProperties{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
     QueueFamilyIndices findPhysicalQueueFamilies() { return findQueueFamilies(physicalDevice); }
     VkFormat findSupportedFormat( const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+    VkSurfaceCapabilitiesKHR getDeviceSurfaceCapabilities();
 };
     
 } // namespace mpp

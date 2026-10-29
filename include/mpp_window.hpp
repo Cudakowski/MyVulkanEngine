@@ -22,7 +22,7 @@ private:
     //VkSurfaceKHR surface{ VK_NULL_HANDLE };// powieżchnia, na której jest wyświetlanie
     glm::ivec2 windowSize{};// wielkość okna
     SDL_Window* window;
-    VkSurfaceCapabilitiesKHR surfaceCaps{};
+    //VkSurfaceCapabilitiesKHR surfaceCaps{};
 
 
     bool framebufferResized{false};
@@ -37,12 +37,20 @@ public:
 
 
     
-    VkSurfaceCapabilitiesKHR getSurfaceCaps(){return surfaceCaps;}
+    //VkSurfaceCapabilitiesKHR getSurfaceCaps(){return surfaceCaps;}
     glm::ivec2 getWindowSize(){return windowSize;}
+
+    /**
+     * @brief Get the Window Extent
+     * 
+     * Function returns window extent in pixels. Not the actual surface extent(this one is acquired inside swapchain creation)
+     * 
+     * @return VkExtent2D 
+     */
     VkExtent2D getExtent();
     bool wasWindowResized(){return framebufferResized;}
     void resetWindowResizedFlag(){ framebufferResized=false;}
-    void createWindowSurface(VkInstance instance, VkSurfaceKHR surface );
+    void createWindowSurface(VkInstance instance, VkSurfaceKHR& surface );
     void setWindowResized(int width, int height);
     
     //void updateWindowSize();

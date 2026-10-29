@@ -34,10 +34,10 @@ MppDevice::MppDevice(MppWindow& window): mppWindow{window}
 
 MppDevice::~MppDevice()
 {
-	vkDestroyCommandPool(device, renderingCommandPool, nullptr);
-	vkDestroyCommandPool(device, textureLoadingCommandPool, nullptr);
+	vkDestroyCommandPool(device_, renderingCommandPool, nullptr);
+	vkDestroyCommandPool(device_, textureLoadingCommandPool, nullptr);
 	vmaDestroyAllocator(allocator);
-    vkDestroyDevice(device, nullptr);
+    vkDestroyDevice(device_, nullptr);
 
     if (enableValidationLayers) {
         vkDestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr); //zakomentowac dla fun'u
@@ -72,7 +72,7 @@ void MppDevice::createCommandPool()
         .queueFamilyIndex = queueFamilyIndices.graphicsFamily
     };
 
-    if(vkCreateCommandPool(device, &renderCommandPoolCI, nullptr, &renderingCommandPool) != VK_SUCCESS)
+    if(vkCreateCommandPool(device_, &renderCommandPoolCI, nullptr, &renderingCommandPool) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create rendering command pool!");
     }
@@ -83,7 +83,7 @@ void MppDevice::createCommandPool()
         .queueFamilyIndex = queueFamilyIndices.graphicsFamily
     };
 
-    if(vkCreateCommandPool(device, &loadingCommandPoolCI, nullptr, &textureLoadingCommandPool) != VK_SUCCESS)
+    if(vkCreateCommandPool(device_, &loadingCommandPoolCI, nullptr, &textureLoadingCommandPool) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create texture loading command pool!");
     }
@@ -111,7 +111,7 @@ void MppDevice::vmaSetup()
     VmaAllocatorCreateInfo allocatorCI{
         .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
         .physicalDevice = physicalDevice,
-        .device = device,
+        .device = device_,
         .pVulkanFunctions = &vkFunctions,
         .instance = instance
     };
@@ -205,6 +205,8 @@ void MppDevice::deviceSetup()
         .pNext = &enabledVk13Features,
         .queueCreateInfoCount = static_cast<uint32_t>(queueCIs.size()),
         .pQueueCreateInfos = queueCIs.data(),
+        .enabledLayerCount = 0,
+        .ppEnabledLayerNames = nullptr,
         .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
         .ppEnabledExtensionNames = deviceExtensions.data(),
         .pEnabledFeatures = &enabledVk10Features
@@ -212,25 +214,26 @@ void MppDevice::deviceSetup()
 
     // might not really be necessary anymore because device specific validation layers
     // have been deprecated
-    if (enableValidationLayers) {
-        deviceCI.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-        deviceCI.ppEnabledLayerNames = validationLayers.data();
-    } else {
-        deviceCI.enabledLayerCount = 0;
-    }
+    // if (enableValidationLayers) {
+    //     deviceCI.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+    //     deviceCI.ppEnabledLayerNames = validationLayers.data();
+    // } else {
+    //     deviceCI.enabledLayerCount = 0;
+    //     deviceCI.ppEnabledLayerNames = nullptr;
+    // }
 
     //tworzenie i sprawdzanie od razu wyniku
     //już mnie denerwuje że nazwy nie są do końca opisujące dobrze
     // przyjmuje: physical device, create info structa, alokator, zmienną do której zapisze wynik
-    if (vkCreateDevice(physicalDevice, &deviceCI, nullptr, &device) != VK_SUCCESS)
+    if (vkCreateDevice(physicalDevice, &deviceCI, nullptr, &device_) != VK_SUCCESS)
     {
         throw std::runtime_error("failed to create logical device!");
     }
 
     // proszenie logical device o kolejke komend
     // przyjmuje: logical device, rodzine kolejek, index kolejki, zmienną do której zapsize wskaźnik do kolejki
-    vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
-    vkGetDeviceQueue(device, indices.presentFamily, 0, &presentQueue);
+    vkGetDeviceQueue(device_, indices.graphicsFamily, 0, &graphicsQueue);
+    vkGetDeviceQueue(device_, indices.presentFamily, 0, &presentQueue);
 }
 
 void MppDevice::detectingDevice()
@@ -294,7 +297,10 @@ void MppDevice::detectingDevice()
 
 void MppDevice::createInstance()
 {
-	volkInitialize();
+	if(volkInitialize() != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to initialize volk");
+    }
 
     if (enableValidationLayers && !checkValidationLayerSupport()) {
         throw std::runtime_error("validation layers requested, but not available!");
@@ -317,31 +323,39 @@ void MppDevice::createInstance()
     */
 
     //pobieranie ilości i nazw rozszerzeń z SDL'a
-    uint32_t instanceExtensionsCount{0};
+    uint32_t sdlExtensionCount{0};
     // to niżej to wskaźnik do tablicy c-style stringów
-    char const* const* instanceExtensions{SDL_Vulkan_GetInstanceExtensions(&instanceExtensionsCount)};
-    
+    char const* const* sdlExtensions{SDL_Vulkan_GetInstanceExtensions(&sdlExtensionCount)};
+    if (!sdlExtensions) {
+        throw std::runtime_error("failed to get SDL Vulkan instance extensions!");
+    }
+
+    std::vector<const char*> extensions(sdlExtensions, sdlExtensions + sdlExtensionCount);
+
+    if (enableValidationLayers) {
+        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+    }
+
     //info o instancji
     VkInstanceCreateInfo instanceCI{
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,// typ structa
+        .pNext = nullptr,
         .pApplicationInfo = &appInfo,//wskaźnik do informacji o aplikacji
-        .enabledExtensionCount = instanceExtensionsCount,//ilość rozszerzeń
-        .ppEnabledExtensionNames = instanceExtensions,//nazwy rozszerzeń
+        .enabledLayerCount = 0,
+        .ppEnabledLayerNames = nullptr,
+        .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),//ilość rozszerzeń
+        .ppEnabledExtensionNames = extensions.data(),//nazwy rozszerzeń
     };
 
-    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
+    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
     if (enableValidationLayers) {
         instanceCI.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         instanceCI.ppEnabledLayerNames = validationLayers.data();
 
         populateDebugMessengerCreateInfo(debugCreateInfo);
-        instanceCI.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
+        //instanceCI.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
+        instanceCI.pNext = &debugCreateInfo;
     } 
-    else 
-    {
-        instanceCI.enabledLayerCount = 0;
-        instanceCI.pNext = nullptr;
-    }
 
     // tworzenie instancji od razu ze sprawdzaniem
     // argumenty funkcji to: struct z infem, alokator, wskaźnik do instancji
@@ -487,6 +501,13 @@ bool MppDevice::checkDeviceExtensionSupport(VkPhysicalDevice device)
     }
 
     return requiredExtensions.empty();
+}
+
+VkSurfaceCapabilitiesKHR MppDevice::getDeviceSurfaceCapabilities()
+{
+    VkSurfaceCapabilitiesKHR capabilities{};
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
+    return capabilities;
 }
 
 SwapChainSupportDetails MppDevice::querySwapChainSupport(VkPhysicalDevice device) 

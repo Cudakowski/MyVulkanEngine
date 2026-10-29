@@ -57,35 +57,7 @@ void App::run()
         float elapsedTime{ (SDL_GetTicks()- lastTime) / 1000.0f };
         lastTime = SDL_GetTicks();
         
-        if(auto commandBuffer = mppRenderer.beginFrame())
-        {
-            //int frameIndex = mppRenderer.getFrameIndex();
-            FrameInfo frameInfo{
-                //frameIndex, 
-                elapsedTime, 
-                commandBuffer, 
-                //camera, 
-                mppLoader.getDescriptorSetTex(),
-                gameObjects
-            };
-
-            // Update shader data ********************************
-            float aspect = mppRenderer.getAspectRatio();
-            shaderData.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 32.0f);
-            shaderData.view = glm::translate(glm::mat4(1.0f), camPos);
-            for (auto i = 0; i<3; i++) {
-                auto instancePos = glm::vec3((float)(i-1)*3.0f, 0.0f, 0.0f);
-                shaderData.model[i] = glm::translate(glm::mat4(1.0f), instancePos) * glm::mat4_cast(glm::quat(objectRotations[i]));
-            }
-            mppRenderer.updateShaderData(shaderData);
-
-            mppRenderer.beginSwapChainRenderPass(commandBuffer);
-            
-            basicRenderSystem.render(frameInfo);
-
-            mppRenderer.endSwapChainRenderPass(commandBuffer);
-            mppRenderer.endFrame(commandBuffer);
-        }
+        
 
         // Poll events ********************************
 
@@ -145,7 +117,39 @@ void App::run()
             }
         }
 
-        mppRenderer.conditionalRecreateSwapChain();
+        if(auto commandBuffer = mppRenderer.beginFrame())
+        {
+            //int frameIndex = mppRenderer.getFrameIndex();
+            FrameInfo frameInfo{
+                //frameIndex, 
+                elapsedTime, 
+                commandBuffer, 
+                //camera, 
+                mppLoader.getDescriptorSetTex(),
+                gameObjects
+            };
+
+            // Update shader data ********************************
+            float aspect = mppRenderer.getAspectRatio();
+            shaderData.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 32.0f);
+            shaderData.view = glm::translate(glm::mat4(1.0f), camPos);
+            for (auto i = 0; i<3; i++) {
+                auto instancePos = glm::vec3((float)(i-1)*3.0f, 0.0f, 0.0f);
+                shaderData.model[i] = glm::translate(glm::mat4(1.0f), instancePos) * glm::mat4_cast(glm::quat(objectRotations[i]));
+            }
+            mppRenderer.updateShaderData(shaderData);
+
+            mppRenderer.beginSwapChainRenderPass(commandBuffer);
+            
+            basicRenderSystem.render(frameInfo);
+
+            mppRenderer.endSwapChainRenderPass(commandBuffer);
+            mppRenderer.endFrame(commandBuffer);
+        } else {
+            SDL_Delay(10);
+        }
+
+        //mppRenderer.conditionalRecreateSwapChain();
 
     }
 

@@ -79,7 +79,7 @@ public:
     //float getAspectRatio() const {return mppSwapChain->extentAspectRatio();}//a to może być nawet kiedyś potrzebne xd
 
     void updateShaderData(ShaderData& shaderData);//a co to xd
-    void conditionalRecreateSwapChain();//to delete
+    //void conditionalRecreateSwapChain();//to delete
     void requestRecreateSwapChain(){updateSwapchain = true;};//to delete
 
     VkCommandBuffer getCurrentCommandBuffer() const {

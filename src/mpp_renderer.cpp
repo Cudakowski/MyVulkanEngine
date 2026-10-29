@@ -15,6 +15,8 @@ MppRenderer::MppRenderer(MppDevice& device, MppWindow& window): mppDevice{device
 
 MppRenderer::~MppRenderer()
 {
+    vkDeviceWaitIdle(mppDevice.getLogicalDevice());
+
     freeCommandBuffers();
     for (auto i = 0; i < MppSwapChain::MAX_FRAMES_IN_FLIGHT; i++) 
     {
@@ -56,12 +58,27 @@ void MppRenderer::freeCommandBuffers()
 void MppRenderer::recreateSwapChain()
 {
     auto extent = mppWindow.getExtent();
-    while (extent.width == 0 || extent.height == 0) 
-    {
-        extent = mppWindow.getExtent();
-        SDL_Event event;
-        SDL_WaitEvent(&event);//TODO: to jest nie dobrze, zatrzymuje przyjmowanie eventów(nie da sie zamknąć okna poprzez x)
+    if (extent.width == 0 || extent.height == 0) {
+        return;
     }
+    
+    // while (extent.width == 0 || extent.height == 0) {
+    //     SDL_Event event;
+    //     if (SDL_WaitEvent(&event)) {
+    //         if (event.type == SDL_EVENT_QUIT) {
+    //             //return; // lub ustaw flagę wyjścia z aplikacji
+    //         }
+    //         SDL_PushEvent(&event); // Zwróć zdarzenie do kolejki, aby pętla główna mogła je normalnie obsłużyć
+    //     }
+    //     extent = mppWindow.getExtent();
+    // }
+
+    // while (extent.width == 0 || extent.height == 0) 
+    // {
+    //     extent = mppWindow.getExtent();
+    //     SDL_Event event;
+    //     SDL_WaitEvent(&event);//TODO: to jest nie dobrze, zatrzymuje przyjmowanie eventów(nie da sie zamknąć okna poprzez x)
+    // }
     vkDeviceWaitIdle(mppDevice.getLogicalDevice());
 
     if (mppSwapChain == nullptr) 
@@ -83,10 +100,25 @@ void MppRenderer::recreateSwapChain()
 VkCommandBuffer MppRenderer::beginFrame()
 {
     assert(!isFrameStarted && "Can't call beginFrame while already in progress");
+
+    if (mppWindow.wasWindowResized()) {
+        mppWindow.resetWindowResizedFlag();
+        //std::cout << "[DEBUG] recreateSwapChain triggered by: beginFrame wasWindowResized\n";
+        recreateSwapChain();
+        return nullptr; 
+    }
+
+    VkExtent2D extent = mppWindow.getExtent();
+    if (extent.width == 0 || extent.height == 0) {
+        return nullptr; 
+    }
+
+    
     
     auto result = mppSwapChain->acquireNextImage(currentImageIndex, fences[frameIndex], imageAcquiredSemaphores[frameIndex]);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) 
     {
+        //std::cout << "[DEBUG] recreateSwapChain triggered by: acquireNextImage VK_ERROR_OUT_OF_DATE_KHR\n";
         recreateSwapChain();
         return nullptr;
     }
@@ -307,8 +339,15 @@ void MppRenderer::endFrame(VkCommandBuffer cb)
 
     auto result = mppSwapChain->submitCommandBuffer(cb, currentImageIndex, fences[frameIndex] , imageAcquiredSemaphores[frameIndex]);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || mppWindow.wasWindowResized()) {
-        mppWindow.resetWindowResizedFlag();
+    // if (result == VK_SUBOPTIMAL_KHR) {
+    //     std::cout << "[DEBUG] recreateSwapChain triggered by: VK_SUBOPTIMAL_KHR\n";
+    // } else if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+    //     std::cout << "[DEBUG] recreateSwapChain triggered by: VK_ERROR_OUT_OF_DATE_KHR\n";
+    // } else if (mppWindow.wasWindowResized()) {
+    //     std::cout << "[DEBUG] recreateSwapChain triggered by: window resize event\n";
+    // }
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         recreateSwapChain();
     } 
     else if (result != VK_SUCCESS) 

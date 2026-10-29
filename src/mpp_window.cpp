@@ -49,7 +49,7 @@ MppWindow::MppWindow( std::string name, int width, int height)
     // powieżchnią do której zapisuje wynik
 
     // pobieranie wielkości okna(nie mam pjęcia po jakiego kija pobieramy wielkośc okna kiedy jest to wpisanie zaraz wyżej)
-    if(!SDL_GetWindowSize(window, &windowSize.x, &windowSize.y))
+    if(!SDL_GetWindowSizeInPixels(window, &windowSize.x, &windowSize.y))
     {
         throw std::runtime_error("failed to get window size1");
     }
@@ -60,24 +60,29 @@ MppWindow::MppWindow( std::string name, int width, int height)
     //     throw std::runtime_error("failed to get surface capabilities1");
     // }
 
+    
+
 } 
 
-void MppWindow::createWindowSurface(VkInstance instance, VkSurfaceKHR surface )
+
+
+
+void MppWindow::createWindowSurface(VkInstance instance, VkSurfaceKHR& surface )
 {
     if (!SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface))
     {
-        throw std::runtime_error("failed to create window surface");
+        throw std::runtime_error(std::string("Failed to create window surface: ") + SDL_GetError());
     }
 }
 
 VkExtent2D MppWindow::getExtent()
 {
-    // pobieramy extent
-    VkExtent2D swapchainExtent{ surfaceCaps.currentExtent };
-    if (surfaceCaps.currentExtent.width == 0xFFFFFFFF) {
-        swapchainExtent = { .width = static_cast<uint32_t>(windowSize.x), .height=static_cast<uint32_t>(windowSize.y)};
+    if(!SDL_GetWindowSizeInPixels(window, &windowSize.x, &windowSize.y))
+    {
+        throw std::runtime_error("failed to get window size2");
     }
-    return swapchainExtent;
+    //std::cout<<windowSize.x <<' '<<windowSize.y<<" getExtentSize\n";
+    return { static_cast<uint32_t>(windowSize.x), static_cast<uint32_t>(windowSize.y) };
 }
 
 void MppWindow::setWindowResized(int width, int height)
