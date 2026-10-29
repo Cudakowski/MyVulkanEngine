@@ -1,7 +1,5 @@
 #pragma once
 
-#include "mpp_device.hpp"
-#include "mpp_checks.hpp"
 
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
@@ -21,55 +19,33 @@ namespace mpp
 class MppWindow 
 {
 private:
-    VkSurfaceKHR surface{ VK_NULL_HANDLE };// powieżchnia, na której jest wyświetlanie
+    //VkSurfaceKHR surface{ VK_NULL_HANDLE };// powieżchnia, na której jest wyświetlanie
     glm::ivec2 windowSize{};// wielkość okna
     SDL_Window* window;
     VkSurfaceCapabilitiesKHR surfaceCaps{};
 
-    MppDevice &mppDevice;
-    bool wasResized{false};
+
+    bool framebufferResized{false};
 
 public:
 
-    MppWindow(MppDevice &device, std::string name, int width, int height);
-    ~MppWindow()
-    {
-	    vkDestroySurfaceKHR(mppDevice.getInstance(), surface, nullptr);
-	    SDL_DestroyWindow(window);
-        SDL_QuitSubSystem(SDL_INIT_VIDEO);
-        SDL_Quit();
-    }
+    MppWindow( std::string name, int width, int height);
+    ~MppWindow();
 
     MppWindow(const MppWindow&) = delete;
     MppWindow& operator=(const MppWindow&) = delete;
 
 
-    VkSurfaceKHR getSurface(){return surface;}
+    
     VkSurfaceCapabilitiesKHR getSurfaceCaps(){return surfaceCaps;}
     glm::ivec2 getWindowSize(){return windowSize;}
     VkExtent2D getExtent();
-
-    // bool wasWindowResized(){return wasResized;}
-    // void setResized(){wasResized=true;}
-    // void resetResizedFlag()
-    // {
-    //     wasResized=false;
-    //     chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
-    //     chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mppDevice.getPhysicalDevice() , surface, &surfaceCaps));
-    // }
+    bool wasWindowResized(){return framebufferResized;}
+    void resetWindowResizedFlag(){ framebufferResized=false;}
+    void createWindowSurface(VkInstance instance, VkSurfaceKHR surface );
+    void setWindowResized(int width, int height);
     
-    void updateWindowSize()
-    {
-        chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
-        while (windowSize.x == 0 || windowSize.y == 0)
-        {
-            SDL_Event event;
-            SDL_WaitEvent(&event);
-            chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
-        }
-        
-        chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mppDevice.getPhysicalDevice() , surface, &surfaceCaps));
-    }
+    //void updateWindowSize();
 };
 
 

@@ -1,30 +1,74 @@
 #include "mpp_window.hpp"
 
+#include <iostream>
 
 namespace mpp
 {
 
-MppWindow::MppWindow(MppDevice &device, std::string name, int width, int height): mppDevice{device}
+//TODO: MOŻE BYĆ POTRZEBNE
+// bool SDLCALL MppWindow::eventWatcher(void *userdata, SDL_Event *event) {
+//     if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+//         auto *window = reinterpret_cast<MppWindow *>(userdata);
+//         window->framebufferResized = true;
+//         window->width = event->window.data1;
+//         window->height = event->window.data2;
+//     }
+//     return true;
+// }
+
+MppWindow::~MppWindow()
 {
+    SDL_DestroyWindow(window);
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+    SDL_Quit();
+}
+
+MppWindow::MppWindow( std::string name, int width, int height)
+{
+    if(!SDL_Init(SDL_INIT_VIDEO))
+    {
+        throw std::runtime_error("failed to initialize SDL");
+    }
+	if(!SDL_Vulkan_LoadLibrary(NULL))
+    {
+        throw std::runtime_error("failed to load vulkan library");
+    }
 
     // WINDOW AND SURFACE ==============================
 
     // tworzenie okna za pomocą SDL'a
-    window = SDL_CreateWindow("Ale jak to Vulkan", 1280, 720, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
-    assert(window);// takie tam sprawdzanie czy działa
+    window = SDL_CreateWindow(name.c_str(), width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+    //assert(window);// takie tam sprawdzanie czy działa
+    if(!window)
+    {
+        throw std::runtime_error("failed to create window");
+    }
 
     // requestowanie suface'a dla tego okna i sprawdzanie
     // przyjmuje wksźnik do okna, instancje, alokator, i zmienną z 
     // powieżchnią do której zapisuje wynik
-    chk(SDL_Vulkan_CreateSurface(window, mppDevice.getInstance(), nullptr, &surface));
 
     // pobieranie wielkości okna(nie mam pjęcia po jakiego kija pobieramy wielkośc okna kiedy jest to wpisanie zaraz wyżej)
-    chk(SDL_GetWindowSize(window, &windowSize.x, &windowSize.y));
+    if(!SDL_GetWindowSize(window, &windowSize.x, &windowSize.y))
+    {
+        throw std::runtime_error("failed to get window size1");
+    }
 
-    // pobieranie właściwości powieżchni
-    chk(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mppDevice.getPhysicalDevice() , surface, &surfaceCaps));
+    // // pobieranie właściwości powieżchni
+    // if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mppDevice.getPhysicalDevice() , surface, &surfaceCaps) != VK_SUCCESS)
+    // {
+    //     throw std::runtime_error("failed to get surface capabilities1");
+    // }
 
 } 
+
+void MppWindow::createWindowSurface(VkInstance instance, VkSurfaceKHR surface )
+{
+    if (!SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface))
+    {
+        throw std::runtime_error("failed to create window surface");
+    }
+}
 
 VkExtent2D MppWindow::getExtent()
 {
@@ -35,6 +79,35 @@ VkExtent2D MppWindow::getExtent()
     }
     return swapchainExtent;
 }
+
+void MppWindow::setWindowResized(int width, int height)
+{
+    framebufferResized = true;
+    windowSize.x = width;
+    windowSize.y = height;
+}
+
+// void MppWindow::updateWindowSize()
+// {
+//     if(!SDL_GetWindowSize(window, &windowSize.x, &windowSize.y))
+//     {
+//         throw std::runtime_error("failed to get window size2");
+//     }
+//     while (windowSize.x == 0 || windowSize.y == 0)
+//     {
+//         SDL_Event event;
+//         SDL_WaitEvent(&event);
+//         if(!SDL_GetWindowSize(window, &windowSize.x, &windowSize.y))
+//         {
+//             throw std::runtime_error("failed to get window size3");
+//         }
+//     }
+    
+//     // if(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mppDevice.getPhysicalDevice() , surface, &surfaceCaps) != VK_SUCCESS);
+//     // {
+//     //     throw std::runtime_error("failed to get surface capabilities2");
+//     // }
+// }
 
 } // namespace mpp
 

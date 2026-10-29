@@ -70,7 +70,8 @@ void App::run()
             };
 
             // Update shader data ********************************
-            shaderData.projection = glm::perspective(glm::radians(45.0f), (float)mppWindow.getWindowSize().x / (float)mppWindow.getWindowSize().y, 0.1f, 32.0f);
+            float aspect = mppRenderer.getAspectRatio();
+            shaderData.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 32.0f);
             shaderData.view = glm::translate(glm::mat4(1.0f), camPos);
             for (auto i = 0; i<3; i++) {
                 auto instancePos = glm::vec3((float)(i-1)*3.0f, 0.0f, 0.0f);
@@ -133,9 +134,9 @@ void App::run()
                 }
 
                 //window resize
-                case SDL_EVENT_WINDOW_RESIZED:
+                case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: 
                 {
-                    mppRenderer.requestRecreateSwapChain();
+                    mppWindow.setWindowResized(event.window.data1, event.window.data2);
                     break;
                 }
             

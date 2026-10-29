@@ -134,6 +134,7 @@ MppPipeline::MppPipeline(MppDevice& device, MppLoader& loader, MppRenderer& rend
     };
 
     //creating pipeline :DDD
+    //dynamic rendering => nie podaje się tutaj render pass'a
     VkGraphicsPipelineCreateInfo pipelineCI{
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext = &renderingCI,

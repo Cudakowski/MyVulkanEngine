@@ -11,74 +11,79 @@
 namespace mpp
 {
 
-constexpr uint32_t MAX_FRAMES_IN_FLIGHT{ 2 };
-
 class MppSwapChain 
 {
+public:
+    static constexpr int MAX_FRAMES_IN_FLIGHT{2};
 private:
     MppDevice &mppDevice;
-    MppWindow &mppWindow;
+    VkExtent2D windowExtent;
     VkExtent2D swapchainExtent;
 
     VkSwapchainKHR swapchain{ VK_NULL_HANDLE };// swapchain
     std::shared_ptr<MppSwapChain> oldSwapChain;
     std::vector<VkImage> swapchainImages;
     std::vector<VkImageView> swapchainImageViews;
-    VkImage depthImage;
-    VmaAllocation depthImageAllocation;
-    VkImageView depthImageView;
+    // VkImage depthImage;
+    // VmaAllocation depthImageAllocation;
+    // VkImageView depthImageView;
+    std::array<VkImage, MAX_FRAMES_IN_FLIGHT> depthImages;
+    std::array<VmaAllocation, MAX_FRAMES_IN_FLIGHT> depthImageAllocations;
+    std::array<VkImageView, MAX_FRAMES_IN_FLIGHT> depthImageViews;
+    VkExtent2D swapChainExtent;
 
-    struct ShaderDataBuffer {
-        VmaAllocation allocation{ VK_NULL_HANDLE };
-        VmaAllocationInfo allocationInfo{};
-        VkBuffer buffer{ VK_NULL_HANDLE };
-        VkDeviceAddress deviceAddress{};
-    };
-    std::array<ShaderDataBuffer, MAX_FRAMES_IN_FLIGHT> shaderDataBuffers;
-    std::array<VkCommandBuffer, MAX_FRAMES_IN_FLIGHT> commandBuffers;
     
 
-    std::array<VkFence, MAX_FRAMES_IN_FLIGHT> fences;
-    std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> imageAcquiredSemaphores;
+
     std::vector<VkSemaphore> renderCompleteSemaphores;
 
-    const VkFormat imageFormat{VK_FORMAT_B8G8R8A8_SRGB };
-    VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
+    VkFormat imageFormat{VK_FORMAT_B8G8R8A8_SRGB };//TODO nie inicjalizować tylko sprawdzać
+    VkFormat depthFormat{ VK_FORMAT_UNDEFINED };//TODO nie inicjalizować tylko sprawdzać
     
-    uint32_t frameIndex{0};
 
     uint32_t imageCount{ 0 };
 
+    void init();
     void createSwapChain();
     void createImageViews();
     void createDepthAttachment();
-    void createShaderDataBuffers();
     void createSynchronizationObjects();
-    void createCommandBuffers();
 
-    VkSwapchainCreateInfoKHR swapchainCI{};
-    VkSemaphoreCreateInfo semaphoreCI{};
-    VkImageCreateInfo depthImageCI{};
+
+    VkFormat findDepthFormat();
+    VkSurfaceFormatKHR MppSwapChain::chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR> &availableFormats);
+    VkPresentModeKHR MppSwapChain::chooseSwapPresentMode( const std::vector<VkPresentModeKHR> &availablePresentModes);
+    VkExtent2D MppSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
 
 public:
-    MppSwapChain(MppDevice &device, MppWindow &window);
-    void recreate();
+    MppSwapChain(MppDevice &device, VkExtent2D windowExtent);
+    MppSwapChain(MppDevice &device, VkExtent2D windowExtent,std::shared_ptr<MppSwapChain> previous);
+    //void recreate();
     ~MppSwapChain();
+
+    MppSwapChain(const MppSwapChain &) = delete;
+    MppSwapChain &operator=(const MppSwapChain &) = delete;
 
     const VkFormat& getImageFormat(){return imageFormat;}
     VkFormat getDepthFormat(){return depthFormat;}
 
-    VkResult acquireNextImage(uint32_t& imageIndex);
-    VkResult submitCommandBuffer(VkCommandBuffer cb,uint32_t& imageIndex);
-
-
-    ShaderDataBuffer& getCurrentShaderDataBuffer(){return shaderDataBuffers[frameIndex];}
-    VkCommandBuffer getCurrentCommandBuffer(){return commandBuffers[frameIndex];}
+    VkResult acquireNextImage(uint32_t& imageIndex, VkFence fence, VkSemaphore imageAcquiredSemaphore);
+    VkResult submitCommandBuffer(VkCommandBuffer cb,uint32_t& imageIndex, VkFence fence, VkSemaphore imageAcquiredSemaphore);
 
     VkImage getCurrentSwapchainImage(uint32_t& imageIndex){return swapchainImages[imageIndex];}
     VkImageView getCurrentSwapchainImageView(uint32_t& imageIndex){return swapchainImageViews[imageIndex];}
-    VkImage getDepthImage(){return depthImage;}
-    VkImageView getDepthImageView(){return depthImageView;}
+    VkImage getDepthImage(uint32_t frameIndex){return depthImages[frameIndex];}
+    VkImageView getDepthImageView(uint32_t frameIndex){return depthImageViews[frameIndex];}
+    VkExtent2D getSwapChainExtent() { return swapChainExtent; }
+
+    bool compareSwapFormats(const MppSwapChain &swapChain) const {
+        return swapChain.depthFormat == depthFormat &&
+            swapChain.imageFormat == imageFormat;
+    }
+    float extentAspectRatio() {
+        return static_cast<float>(swapChainExtent.width) /
+              static_cast<float>(swapChainExtent.height);
+    }
 
 };
 

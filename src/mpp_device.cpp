@@ -12,10 +12,20 @@
 namespace mpp
 {
 
-MppDevice::MppDevice()
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData) {
+    std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+
+    return VK_FALSE;
+}
+
+
+
+MppDevice::MppDevice(MppWindow& window): mppWindow{window}
 {
-    initialize();
+    checkAssets();
     createInstance();
+    setupDebugMessenger();
+    createSurface();
     detectingDevice();
     deviceSetup();
     vmaSetup();
@@ -24,35 +34,67 @@ MppDevice::MppDevice()
 
 MppDevice::~MppDevice()
 {
-	vkDestroyCommandPool(device, commandPool, nullptr);
+	vkDestroyCommandPool(device, renderingCommandPool, nullptr);
+	vkDestroyCommandPool(device, textureLoadingCommandPool, nullptr);
 	vmaDestroyAllocator(allocator);
     vkDestroyDevice(device, nullptr);
+
+    if (enableValidationLayers) {
+        vkDestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr); //zakomentowac dla fun'u
+    }
+    vkDestroySurfaceKHR(instance, surface, nullptr);
 	vkDestroyInstance(instance, nullptr);
+    
+}
+
+void MppDevice::createSurface() { mppWindow.createWindowSurface(instance, surface); }
+
+void MppDevice::setupDebugMessenger() 
+{
+    if (!enableValidationLayers) return;
+
+    VkDebugUtilsMessengerCreateInfoEXT createInfo;
+    populateDebugMessengerCreateInfo(createInfo);
+    if (vkCreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
+        throw std::runtime_error("failed to set up debug messenger!");
+    }
 }
 
 void MppDevice::createCommandPool()
 {
+    QueueFamilyIndices queueFamilyIndices = findPhysicalQueueFamilies();
     // COMMAND BUFFERS ==============================================================
 
     // buffery komend musza być zalokowane z command pool'a
-    VkCommandPoolCreateInfo commandPoolCI{
+    VkCommandPoolCreateInfo renderCommandPoolCI{
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = queueFamily
+        .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = queueFamilyIndices.graphicsFamily
     };
-    chk(vkCreateCommandPool(device, &commandPoolCI, nullptr, &commandPool));
+
+    if(vkCreateCommandPool(device, &renderCommandPoolCI, nullptr, &renderingCommandPool) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create rendering command pool!");
+    }
+
+    VkCommandPoolCreateInfo loadingCommandPoolCI{
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+        .queueFamilyIndex = queueFamilyIndices.graphicsFamily
+    };
+
+    if(vkCreateCommandPool(device, &loadingCommandPoolCI, nullptr, &textureLoadingCommandPool) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create texture loading command pool!");
+    }
 }
 
-void MppDevice::initialize()
+void MppDevice::checkAssets()
 {
     // Make sure asset folder is present from the current working directory
 	if (!std::filesystem::is_directory("assets")) {
-		std::cerr << "Could not locate assets folder from current working directory\n";
-		exit(-1);
+		throw std::runtime_error("Could not locate assets folder from current working directory\n");
 	}
-	chk(SDL_Init(SDL_INIT_VIDEO));
-	chk(SDL_Vulkan_LoadLibrary(NULL));
-	volkInitialize();
 }
 
 void MppDevice::vmaSetup()
@@ -68,51 +110,57 @@ void MppDevice::vmaSetup()
     //struct z info
     VmaAllocatorCreateInfo allocatorCI{
         .flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
-        .physicalDevice = devices[deviceIndex],
+        .physicalDevice = physicalDevice,
         .device = device,
         .pVulkanFunctions = &vkFunctions,
         .instance = instance
     };
     //tworzenie alokatora i sprawdzanie
-    chk(vmaCreateAllocator(&allocatorCI, &allocator));
+    if(vmaCreateAllocator(&allocatorCI, &allocator) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create allocator");
+    }
 }
 
 void MppDevice::deviceSetup()
 {
+    QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
     // QUEUES ===============================================
 
-    // pobieranie najpierw liczby rodzin kolejek a potem pobiranie kolejek
-    uint32_t queueFamilyCount{0};
-    vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, nullptr);
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(devices[deviceIndex], &queueFamilyCount, queueFamilies.data());
     
-    // szukamy kolejki graficznej
-    for (size_t i{0}; i < queueFamilies.size(); i++) {
-        if(queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT){
-            queueFamily = i;
-            break;
-        }
-    }
-    //sprawdzamy czy ta kolejka wspiera prezentowanie
-    chk(SDL_Vulkan_GetPresentationSupport(instance, devices[deviceIndex], queueFamily));
+
+    std::vector<VkDeviceQueueCreateInfo> queueCIs;
+    std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
+
+    
+
 
     // zapisujemy info tej rodziny kolejek
     // jest możliwe posiadania wielu kolejek dlatego specyfikuje 
     // się priorytet, ale tu jest ino jedna
-    const float qfpriorities{ 1.0f };
-    VkDeviceQueueCreateInfo queueCI{
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .queueFamilyIndex = queueFamily,
-        .queueCount =1,
-        .pQueuePriorities = &qfpriorities
-    };
+    // const float qfpriorities{ 1.0f };
+    // VkDeviceQueueCreateInfo queueCI{
+    //     .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+    //     .queueFamilyIndex = queueFamily,
+    //     .queueCount =1,
+    //     .pQueuePriorities = &qfpriorities
+    // };
+
+    float queuePriority = 1.0f;
+    for (uint32_t queueFamily : uniqueQueueFamilies) {
+        VkDeviceQueueCreateInfo queueCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .queueFamilyIndex = queueFamily,
+            .queueCount = 1,
+            .pQueuePriorities = &queuePriority,
+        };
+        queueCIs.push_back(queueCreateInfo);
+    }
 
     // DEVICE SETUP ======================================
 
     // pobieranie rozszerzeń
     // tylko swapchain żeby wyświetlić coś
-    const std::vector<const char*> deviceExtensions{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
     /*
     The Vulkan header defines constants for all extensions like 
@@ -125,18 +173,18 @@ void MppDevice::deviceSetup()
     // włączenie feature'ów
     VkPhysicalDeviceVulkan12Features enabledVk12Features{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-        .descriptorIndexing = true,
-        .shaderSampledImageArrayNonUniformIndexing = true,// coś o indeksowaniu descriptorów
-        .descriptorBindingVariableDescriptorCount = true,// coś o indeksowaniu descriptorów
-        .runtimeDescriptorArray = true,// coś o indeksowaniu descriptorów
-        .bufferDeviceAddress = true
+        .descriptorIndexing = VK_TRUE,
+        .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,// coś o indeksowaniu descriptorów
+        .descriptorBindingVariableDescriptorCount = VK_TRUE,// coś o indeksowaniu descriptorów
+        .runtimeDescriptorArray = VK_TRUE,// coś o indeksowaniu descriptorów
+        .bufferDeviceAddress = VK_TRUE
     };
 
     VkPhysicalDeviceVulkan13Features enabledVk13Features{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
         .pNext = &enabledVk12Features,
-        .synchronization2 = true,
-        .dynamicRendering = true // to to ten hehe :D
+        .synchronization2 = VK_TRUE,
+        .dynamicRendering = VK_TRUE // to to ten hehe :D
     };
     
     VkPhysicalDeviceFeatures enabledVk10Features{
@@ -155,20 +203,34 @@ void MppDevice::deviceSetup()
     VkDeviceCreateInfo deviceCI{
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = &enabledVk13Features,
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queueCI,
+        .queueCreateInfoCount = static_cast<uint32_t>(queueCIs.size()),
+        .pQueueCreateInfos = queueCIs.data(),
         .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
         .ppEnabledExtensionNames = deviceExtensions.data(),
         .pEnabledFeatures = &enabledVk10Features
     };
+
+    // might not really be necessary anymore because device specific validation layers
+    // have been deprecated
+    if (enableValidationLayers) {
+        deviceCI.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+        deviceCI.ppEnabledLayerNames = validationLayers.data();
+    } else {
+        deviceCI.enabledLayerCount = 0;
+    }
+
     //tworzenie i sprawdzanie od razu wyniku
     //już mnie denerwuje że nazwy nie są do końca opisujące dobrze
     // przyjmuje: physical device, create info structa, alokator, zmienną do której zapisze wynik
-    chk(vkCreateDevice(devices[deviceIndex], &deviceCI, nullptr, &device));
+    if (vkCreateDevice(physicalDevice, &deviceCI, nullptr, &device) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create logical device!");
+    }
 
     // proszenie logical device o kolejke komend
     // przyjmuje: logical device, rodzine kolejek, index kolejki, zmienną do której zapsize wskaźnik do kolejki
-    vkGetDeviceQueue(device, queueFamily, 0, &queue);
+    vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
+    vkGetDeviceQueue(device, indices.presentFamily, 0, &presentQueue);
 }
 
 void MppDevice::detectingDevice()
@@ -177,8 +239,13 @@ void MppDevice::detectingDevice()
 
 
     // najpierw wykrywanie ilości urządzeń a potem samych urządzeń
+    std::vector<VkPhysicalDevice> devices;
     uint32_t deviceCount{0};
     chk(vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr));
+    if (deviceCount == 0) 
+    {
+        throw std::runtime_error("failed to find GPUs with Vulkan support!");
+    }
     devices.resize(deviceCount);
     chk(vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data()));
 
@@ -189,44 +256,31 @@ void MppDevice::detectingDevice()
     result list. The second call then fills the actual result list.
     */
 
-    int argc = 1;
-    char** argv = nullptr;
+    // int argc = 1;
+    // char** argv = nullptr;
 
-    // wybieranie urządzenia
-    // uint32_t deviceIndex{0};// defaultowo 0
-    if (argc > 1){// można podać przy uruchamianiu
-        deviceIndex =std::stoi(argv[1]);
-        assert(deviceIndex < deviceCount);
+    // // wybieranie urządzenia
+    // // uint32_t deviceIndex{0};// defaultowo 0
+    // if (argc > 1){// można podać przy uruchamianiu
+    //     deviceIndex =std::stoi(argv[1]);
+    //     assert(deviceIndex < deviceCount);
+    // }
+
+
+    for (const auto &device : devices) {
+        if (isDeviceSuitable(device)) {
+            physicalDevice = device;
+            break;
+        }
     }
 
-//     void SspDevice::pickPhysicalDevice() {
-//   uint32_t deviceCount = 0;
-//   vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-//   if (deviceCount == 0) {
-//     throw std::runtime_error("failed to find GPUs with Vulkan support!");
-//   }
-//   std::cout << "Device count: " << deviceCount << std::endl;
-//   std::vector<VkPhysicalDevice> devices(deviceCount);
-//   vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+    if (physicalDevice == VK_NULL_HANDLE) {
+        throw std::runtime_error("failed to find a suitable GPU!");
+    }
 
-//   for (const auto &device : devices) {
-//     if (isDeviceSuitable(device)) {
-//       physicalDevice = device;
-//       break;
-//     }
-//   }
-
-//   if (physicalDevice == VK_NULL_HANDLE) {
-//     throw std::runtime_error("failed to find a suitable GPU!");
-//   }
-
-//   vkGetPhysicalDeviceProperties(physicalDevice, &properties);
-//   std::cout << "physical device: " << properties.deviceName << std::endl;
-// }
 
     // pobieranie właściwości urządzenia i printowanie nazwy
-    VkPhysicalDeviceProperties2 deviceProperties{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-    vkGetPhysicalDeviceProperties2(devices[deviceIndex], &deviceProperties);
+    vkGetPhysicalDeviceProperties2(physicalDevice, &deviceProperties);
     std::cout << "Selected device: " << deviceProperties.properties.deviceName << "\n";
 
     /*
@@ -240,6 +294,11 @@ void MppDevice::detectingDevice()
 
 void MppDevice::createInstance()
 {
+	volkInitialize();
+
+    if (enableValidationLayers && !checkValidationLayerSupport()) {
+        throw std::runtime_error("validation layers requested, but not available!");
+    }
     //INSTANCJA ==================================================
 
 
@@ -269,11 +328,210 @@ void MppDevice::createInstance()
         .enabledExtensionCount = instanceExtensionsCount,//ilość rozszerzeń
         .ppEnabledExtensionNames = instanceExtensions,//nazwy rozszerzeń
     };
+
+    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
+    if (enableValidationLayers) {
+        instanceCI.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+        instanceCI.ppEnabledLayerNames = validationLayers.data();
+
+        populateDebugMessengerCreateInfo(debugCreateInfo);
+        instanceCI.pNext = (VkDebugUtilsMessengerCreateInfoEXT *)&debugCreateInfo;
+    } 
+    else 
+    {
+        instanceCI.enabledLayerCount = 0;
+        instanceCI.pNext = nullptr;
+    }
+
     // tworzenie instancji od razu ze sprawdzaniem
     // argumenty funkcji to: struct z infem, alokator, wskaźnik do instancji
-    chk(vkCreateInstance(&instanceCI, nullptr, &instance));
+    if(vkCreateInstance(&instanceCI, nullptr, &instance) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create instance!");
+    }
 
 	volkLoadInstance(instance);//co
+}
+
+bool MppDevice::checkValidationLayerSupport() 
+{
+    uint32_t layerCount;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+    std::vector<VkLayerProperties> availableLayers(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+    for (const char *layerName : validationLayers) {
+        bool layerFound = false;
+
+        for (const auto &layerProperties : availableLayers) {
+            if (strcmp(layerName, layerProperties.layerName) == 0) {
+                layerFound = true;
+                break;
+            }
+        }
+
+        if (!layerFound) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void MppDevice::populateDebugMessengerCreateInfo( VkDebugUtilsMessengerCreateInfoEXT &createInfo) 
+{
+    createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | 
+                                VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT; //added verbose
+    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |//added general
+                            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    createInfo.pfnUserCallback = debugCallback;
+    createInfo.pUserData = nullptr;  // Optional
+}
+
+bool MppDevice::isDeviceSuitable(VkPhysicalDevice device) 
+{
+    QueueFamilyIndices indices = findQueueFamilies(device);
+
+    bool extensionsSupported = checkDeviceExtensionSupport(device);
+
+    bool swapChainAdequate = false;
+    if (extensionsSupported) {
+        SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+        swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+    }
+
+    VkPhysicalDeviceFeatures supportedFeatures;
+    vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+
+    return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+}
+
+QueueFamilyIndices MppDevice::findQueueFamilies(VkPhysicalDevice device) 
+{
+    QueueFamilyIndices indices;
+
+    // pobieranie najpierw liczby rodzin kolejek a potem pobiranie kolejek
+    uint32_t queueFamilyCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+    
+    // // szukamy kolejki graficznej
+    // for (size_t i{0}; i < queueFamilies.size(); i++) {
+    //     if(queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT){
+    //         queueFamily = i;
+    //         break;
+    //     }
+    // }
+
+    int i = 0;
+    for (const auto &queueFamily : queueFamilies) {
+        if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) 
+        {
+            indices.graphicsFamily = i;
+            indices.graphicsFamilyHasValue = true;
+        }
+
+        VkBool32 presentSupport = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+        
+        if (queueFamily.queueCount > 0 && presentSupport) 
+        {
+            indices.presentFamily = i;
+            indices.presentFamilyHasValue = true;
+        }
+
+        if (indices.isComplete()) 
+        {
+            break;
+        }
+
+        i++;
+    }
+
+    //sprawdzamy czy ta kolejka wspiera prezentowanie
+    // if(!SDL_Vulkan_GetPresentationSupport(instance, physicalDevice, queueFamily))
+    // {
+    //     throw std::runtime_error("presentation support not supported");
+    // }
+    /*
+    Kiedy warto rozważyć SDL_Vulkan_GetPresentationSupport?
+    Jedyny sensowny przypadek to sytuacja, w której z powodów 
+    architektonicznych chcesz wybrać fizyczne GPU i logiczne 
+    urządzenie zanim w ogóle otworzysz jakiekolwiek okno (np. 
+    silnik inicjalizuje podsystem renderujący w tle, a okno 
+    tworzone jest później). W praktyce gier i aplikacji okienkowych 
+    zdarza się to bardzo rzadko.
+    */
+
+    return indices;
+}
+
+bool MppDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) 
+{
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+    std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
+
+    for (const auto &extension : availableExtensions) {
+        requiredExtensions.erase(extension.extensionName);
+    }
+
+    return requiredExtensions.empty();
+}
+
+SwapChainSupportDetails MppDevice::querySwapChainSupport(VkPhysicalDevice device) 
+{
+    SwapChainSupportDetails details;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+
+    if (formatCount != 0) {
+        details.formats.resize(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+    }
+
+    uint32_t presentModeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+
+    if (presentModeCount != 0) {
+        details.presentModes.resize(presentModeCount);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device,surface,&presentModeCount,details.presentModes.data());
+    }
+    return details;
+}
+
+VkFormat MppDevice::findSupportedFormat( const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features) 
+{
+    for (VkFormat format : candidates) 
+    {
+        VkFormatProperties2 formatProperties{.sType = VK_STRUCTURE_TYPE_FORMAT_PROPERTIES_2};
+        vkGetPhysicalDeviceFormatProperties2(physicalDevice, format, &formatProperties);
+
+
+        if  (tiling == VK_IMAGE_TILING_LINEAR && 
+            (formatProperties.formatProperties.linearTilingFeatures & features) == features) 
+        {
+        return format;
+        } 
+        else if (tiling == VK_IMAGE_TILING_OPTIMAL && 
+                (formatProperties.formatProperties.optimalTilingFeatures & features) == features) 
+        {
+        return format;
+        }
+    }
+    throw std::runtime_error("failed to find supported format!");
 }
 
 } // namespace mpp

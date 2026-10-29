@@ -206,7 +206,7 @@ std::unique_ptr<MppTexture> MppLoader::createTextureFromFile(const std::string &
     VkCommandBuffer cbOneTime{};
     VkCommandBufferAllocateInfo cbOneTimeAI{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = mppDevice.getCommandPool(),
+        .commandPool = mppDevice.getTextureLoadingCommandPool(),
         .commandBufferCount = 1
     };
     chk(vkAllocateCommandBuffers(mppDevice.getLogicalDevice(), &cbOneTimeAI, &cbOneTime));
@@ -288,7 +288,7 @@ std::unique_ptr<MppTexture> MppLoader::createTextureFromFile(const std::string &
         .pCommandBufferInfos = &cbOneTimeSubmitInfo
     };
 
-    chk(vkQueueSubmit2(mppDevice.getQueue(), 1, &oneTimeSI, fenceOneTime));
+    chk(vkQueueSubmit2(mppDevice.getGraphicsQueue(), 1, &oneTimeSI, fenceOneTime));
     chk(vkWaitForFences(mppDevice.getLogicalDevice(), 1, &fenceOneTime, VK_TRUE, UINT64_MAX));
 
 
@@ -317,6 +317,7 @@ std::unique_ptr<MppTexture> MppLoader::createTextureFromFile(const std::string &
     textureCount++;
 
     return std::move(mppTexture);
+    // TODO: Zwolnić pamięc po buferze komend
 }
 
 

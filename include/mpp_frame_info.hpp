@@ -18,6 +18,7 @@ struct ShaderData{
     glm::mat4 model[3];
     glm::vec4 lightPos{ 0.0f, -10.0f, 10.0f, 0.0f};
     uint32_t selected{1};
+    float _padding[3];
 };
 
 struct FrameInfo {
