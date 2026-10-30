@@ -333,7 +333,11 @@ std::unique_ptr<MppModel> MppLoader::createModelFromFile(const std::string& file
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
-    chk(tinyobj::LoadObj(&attrib, &shapes, &materials, nullptr, nullptr, file.c_str()));
+    std::string err{};
+    if(! tinyobj::LoadObj(&attrib, &shapes, &materials, nullptr, &err, file.c_str()))
+    {
+        std::cout << err;
+    }
 
     // zmieniamy pobrane dane na taki format jaki chcemy żeby potem załadować to do gpu
     const VkDeviceSize indexCount{shapes[0].mesh.indices.size()};
