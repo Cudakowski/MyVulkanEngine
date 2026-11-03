@@ -14,6 +14,25 @@
 namespace mpp
 {
 
+struct PipelineConfigInfo {
+  PipelineConfigInfo() = default;
+  PipelineConfigInfo(const PipelineConfigInfo&)=delete;
+  PipelineConfigInfo& operator=(const PipelineConfigInfo&)=delete;
+
+  std::vector<VkVertexInputBindingDescription> bindingDescriptions{}; 
+  std::vector<VkVertexInputAttributeDescription> attributeDescriptions{}; 
+  VkPipelineViewportStateCreateInfo viewportInfo;
+  VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo;
+  VkPipelineRasterizationStateCreateInfo rasterizationInfo;
+  VkPipelineMultisampleStateCreateInfo multisampleInfo;
+  VkPipelineColorBlendAttachmentState colorBlendAttachment;
+  VkPipelineColorBlendStateCreateInfo colorBlendInfo;
+  VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
+  std::vector<VkDynamicState> dynamicStateEnables;
+  VkPipelineDynamicStateCreateInfo dynamicStateInfo;
+};
+
+
 
 class MppPipeline 
 {
@@ -22,20 +41,22 @@ private:
     MppLoader& mppLoader;
     MppRenderer& mppRenderer;
 
-    VkPipelineLayout pipelineLayout{ VK_NULL_HANDLE };
     VkPipeline pipeline{ VK_NULL_HANDLE };
+    // VkShaderModule vertShaderModule;
+    // VkShaderModule fragShaderModule;
+    // void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
 public:
 
-    MppPipeline(MppDevice& device, MppLoader& loader, MppRenderer& renderer);
-    ~MppPipeline()
-    {
-	    vkDestroyPipelineLayout(mppDevice.getLogicalDevice(), pipelineLayout, nullptr);
-	    vkDestroyPipeline(mppDevice.getLogicalDevice(), pipeline, nullptr);
+    MppPipeline(MppDevice& device, MppLoader& loader, MppRenderer& renderer,const PipelineConfigInfo& configInfo,const VkPipelineLayout &pipelineLayout);
+    ~MppPipeline();
 
-    }
+    MppPipeline(const MppPipeline&) = delete;
+    MppPipeline& operator=(const MppPipeline&) = delete;
+    
 
     void bind(VkCommandBuffer commandBuffer);
-    VkPipelineLayout getPipelineLayout(){return pipelineLayout;}
+    static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo);
+    static void enableAlphaBlending(PipelineConfigInfo& configInfo); //TODO
 };
 
 

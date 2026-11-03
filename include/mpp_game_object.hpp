@@ -9,6 +9,16 @@
 namespace mpp
 {
 
+struct TransformComponent{
+    glm::vec3 translation{}; // {position offset}
+    glm::vec3 scale{1.f,1.f, 1.f};
+    glm::vec3 rotation{};
+
+    glm::mat4 mat4();
+    glm::mat3 normalMatrix();
+};
+
+
 
 class MppGameObject 
 {
@@ -26,7 +36,14 @@ public:
         return MppGameObject{currentId++};
     }
 
+    MppGameObject(const MppGameObject &)=delete;
+    MppGameObject &operator=(const MppGameObject &) = delete;
+    MppGameObject(MppGameObject &&) =default;
+    MppGameObject &operator=(MppGameObject &&) = default;
+
     id_t getId(){return id;}
+
+    TransformComponent transform{};
 private:
     id_t id;
 

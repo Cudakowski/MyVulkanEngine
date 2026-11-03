@@ -31,6 +31,7 @@ private:
     VkDescriptorPool descriptorPool{ VK_NULL_HANDLE };
     VkDescriptorSet descriptorSetTex{VK_NULL_HANDLE};
     std::vector<VkDescriptorImageInfo> textureDescriptors{};
+    
     Slang::ComPtr<slang::IGlobalSession> slangGlobalSession;
     VkShaderModule shaderModule{};
 

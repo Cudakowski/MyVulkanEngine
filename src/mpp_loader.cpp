@@ -13,7 +13,6 @@ MppLoader::~MppLoader()
 	vkDestroyDescriptorSetLayout(mppDevice.getLogicalDevice(), descriptorSetLayoutTex, nullptr);
 	vkDestroyDescriptorPool(mppDevice.getLogicalDevice(), descriptorPool, nullptr);
 	vkDestroyShaderModule(mppDevice.getLogicalDevice(), shaderModule, nullptr);
-
 }
 
 void MppLoader::loadShaders()

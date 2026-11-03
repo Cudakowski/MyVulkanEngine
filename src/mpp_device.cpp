@@ -22,7 +22,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverity
 
 MppDevice::MppDevice(MppWindow& window): mppWindow{window}
 {
-    checkAssets();
+    checkAssets();// TODO: Trzeba to przenieśc gdzies poza to
     createInstance();
     setupDebugMessenger();
     createSurface();

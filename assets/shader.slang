@@ -21,6 +21,12 @@ struct VSInput {
 // TEKSTURYYYY!!!!!!!!! :OOOOOOOOO
 Sampler2D textures[];
 
+struct MeshObjectData {
+    float4x4 modelMatrix;
+    float4x4 normalMatrix;
+};
+
+
 //struct ten współdzielony zdefiniowany w kodzie (UBO jako wskaźnik dzięki resizable bar :D)
 struct ShaderData {
     float4x4 projection;
@@ -28,6 +34,7 @@ struct ShaderData {
     float4x4 model[3];
     float4 lightPos;
     uint32_t selected;
+    MeshObjectData objectData[128];
 };
 
 // vertex shader output

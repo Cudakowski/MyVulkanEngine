@@ -19,7 +19,7 @@ MppModel::MppModel(MppDevice& device, const std::vector<Vertex>& vertices, const
         // flagi do resizable BAR !! :D
         .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
         .usage = VMA_MEMORY_USAGE_AUTO
-    }; 
+    };
     VmaAllocationInfo vBufferAllocInfo{};
     chk(vmaCreateBuffer(mppDevice.getAllocator(), &bufferCI, &vBufferAllocCI, &vBuffer, &vBufferAllocation, &vBufferAllocInfo));
     

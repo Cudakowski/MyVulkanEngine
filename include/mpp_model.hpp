@@ -27,6 +27,10 @@ public:
         glm::vec3 pos;
         glm::vec3 normal;
         glm::vec2 uv;
+
+        bool operator==(const Vertex &other) const{
+            return pos == other.pos && normal == other.normal && uv == other.uv;
+        }
     };
 
     MppModel(MppDevice& device, const std::vector<Vertex>& vertices, const std::vector<uint16_t>& indices, VkDeviceSize indCount);

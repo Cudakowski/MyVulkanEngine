@@ -49,6 +49,8 @@ void App::run()
 
     ShaderData shaderData{};
 
+    glm::mat4 kek{};
+    sizeof(kek);
 
     uint64_t lastTime{ SDL_GetTicks() };
     bool quit{ false };
