@@ -1,5 +1,10 @@
 #include "mpp_loader.hpp"
 
+#include <filesystem>
+#include <fstream>
+#include <cstring>
+#include <iostream>
+
 namespace mpp
 {
 
@@ -19,44 +24,79 @@ void MppLoader::loadShaders()
 {
     // LOADING SHADERS =====================================================
     
-    // kumpilowanie slanga do SPIR-V w runtimie :D
+    // kumpilowanie slanga do SPIR-V w runtimie :D (TODO:: tylko na czas developement'u i do edytora(ryyko bezpieczeństwa))
     // SPIR-V to taki pośredniczący język shaderów który vulkan umie czytać. 
     // GLSL też do niego najpierw sie kompiluje.
 
-    // tworzenie globalnej sesji
-    slang::createGlobalSession(slangGlobalSession.writeRef());
-    
-    // tworzenie takiej o sesji xd
-    auto slangTargets{ std::to_array<slang::TargetDesc>({ {
-        .format{SLANG_SPIRV},
-        .profile{slangGlobalSession->findProfile("spirv_1_4")}
-    } })};
-    auto slangOptions{std::to_array<slang::CompilerOptionEntry>({ {
-        slang::CompilerOptionName::EmitSpirvDirectly,
-        {slang::CompilerOptionValueKind::Int, 1}
-    } })};
-    slang::SessionDesc slangSessionDesc{
-        .targets{slangTargets.data()},
-        .targetCount{SlangInt(slangTargets.size())},
-        .defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR,
-        .compilerOptionEntries{slangOptions.data()},
-        .compilerOptionEntryCount{uint32_t(slangOptions.size())}
-    };
-    Slang::ComPtr<slang::ISession> slangSession;
-    slangGlobalSession->createSession(slangSessionDesc, slangSession.writeRef());
+    const std::filesystem::path sourcePath = "assets/shader.slang";
+    const std::filesystem::path cachePath  = "assets/shader.spv";
 
-    // loading texture shader
-    Slang::ComPtr<slang::IModule> slangModule{
-        slangSession->loadModuleFromSource("triangle", "assets/shader.slang", nullptr, nullptr)
-    };
-    Slang::ComPtr<ISlangBlob> spirv;
-    slangModule->getTargetCode(0, spirv.writeRef());
+    std::vector<uint32_t> spirvData;
+    bool needsCompilation = true;
+
+
+    //pobieranie już skompilowanego pliku jeżeli istnieje i nie jest stary
+    if (std::filesystem::exists(cachePath) && std::filesystem::exists(sourcePath)) {
+        auto sourceTime = std::filesystem::last_write_time(sourcePath);
+        auto cacheTime  = std::filesystem::last_write_time(cachePath);
+
+        if (cacheTime >= sourceTime) {
+            std::ifstream file(cachePath, std::ios::binary | std::ios::ate);
+            size_t size = file.tellg();
+            file.seekg(0);
+            spirvData.resize(size / sizeof(uint32_t));
+            file.read(reinterpret_cast<char*>(spirvData.data()), size);
+            needsCompilation = false;
+            std::cout<<"Loaded shader\n";
+        }
+    }
+    if(needsCompilation)
+    {
+
+        // tworzenie globalnej sesji
+        slang::createGlobalSession(slangGlobalSession.writeRef());
+        
+        // tworzenie takiej o sesji xd
+        auto slangTargets{ std::to_array<slang::TargetDesc>({ {
+            .format{SLANG_SPIRV},
+            .profile{slangGlobalSession->findProfile("spirv_1_4")}
+        } })};
+        auto slangOptions{std::to_array<slang::CompilerOptionEntry>({ {
+            slang::CompilerOptionName::EmitSpirvDirectly,
+            {slang::CompilerOptionValueKind::Int, 1}
+        } })};
+        slang::SessionDesc slangSessionDesc{
+            .targets{slangTargets.data()},
+            .targetCount{SlangInt(slangTargets.size())},
+            .defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR,
+            .compilerOptionEntries{slangOptions.data()},
+            .compilerOptionEntryCount{uint32_t(slangOptions.size())}
+        };
+        Slang::ComPtr<slang::ISession> slangSession;
+        slangGlobalSession->createSession(slangSessionDesc, slangSession.writeRef());
+    
+        // loading texture shader
+        Slang::ComPtr<slang::IModule> slangModule{
+            slangSession->loadModuleFromSource("triangle", sourcePath.string().c_str(), nullptr, nullptr)
+        };
+        Slang::ComPtr<ISlangBlob> spirv;
+        slangModule->getTargetCode(0, spirv.writeRef());
+    
+        //zapisywanie
+        size_t byteSize = spirv->getBufferSize();
+        spirvData.resize(byteSize / sizeof(uint32_t));
+        std::memcpy(spirvData.data(), spirv->getBufferPointer(), byteSize);
+
+        std::ofstream outFile(cachePath, std::ios::binary);
+        outFile.write(reinterpret_cast<const char*>(spirv->getBufferPointer()), byteSize);
+        std::cout<<"Compiled shader\n";
+    }
 
     // tworzenie modułu shadera (kontener na skompilowany SPRI-V)
     VkShaderModuleCreateInfo shaderModuleCI{
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = spirv->getBufferSize(),
-        .pCode = (uint32_t*)spirv->getBufferPointer()
+        .codeSize = spirvData.size() * sizeof(uint32_t),
+        .pCode = spirvData.data()
     };
     chk(vkCreateShaderModule(mppDevice.getLogicalDevice(), &shaderModuleCI, nullptr, &shaderModule));
 
