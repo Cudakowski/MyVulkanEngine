@@ -45,7 +45,7 @@ void MppModel::bind(VkCommandBuffer commandBuffer)
 void MppModel::draw(VkCommandBuffer commandBuffer)
 {
     //DRAW :DDDDD
-    vkCmdDrawIndexed(commandBuffer, indexCount, 3, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);//TODO: INSTANCJE OGARNĄĆ
 }
 
 } // namespace mpp

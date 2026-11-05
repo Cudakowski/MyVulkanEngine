@@ -205,7 +205,7 @@ void MppPipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo)
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
     };
 
-    VkPipelineColorBlendStateCreateInfo colorBlendState{
+    configInfo.colorBlendInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         .logicOpEnable = VK_FALSE,
         .logicOp =  VK_LOGIC_OP_COPY,   //optional

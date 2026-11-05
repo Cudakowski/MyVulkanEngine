@@ -12,7 +12,7 @@ namespace mpp
 {
 
 struct PushConstants {
-    VkDeviceAddress sceneAddress;
+    VkDeviceAddress shaderDataAddress;
     uint32_t objectId;
 };
 
@@ -26,6 +26,7 @@ struct ShaderData{
     glm::mat4 view;
     glm::vec4 lightPos{ 0.0f, -10.0f, 10.0f, 0.0f};
     uint32_t selected{1};
+    uint32_t _padding[3];
     MeshObjectData objectData[128];
 };
 

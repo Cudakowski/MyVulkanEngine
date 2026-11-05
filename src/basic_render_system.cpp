@@ -1,5 +1,7 @@
 #include "basic_render_system.hpp"
 
+#include "mpp_frame_info.hpp"
+
 namespace mpp
 {
 BasicRenderSystem::BasicRenderSystem(MppDevice &device, MppRenderer &renderer, MppLoader &loader): mppDevice{device}, mppRenderer{renderer}, mppLoader{loader}
@@ -34,7 +36,7 @@ void BasicRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayo
     VkPushConstantRange pushConstantRange{
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, //| VK_SHADER_STAGE_FRAGMENT_BIT  TODO:nie wiem czy potrzebne
         .offset = 0,
-        .size = sizeof(VkDeviceAddress)// max =  128 bajtów
+        .size = sizeof(PushConstants)// max =  128 bajtów
     };
     VkPipelineLayoutCreateInfo pipelineLayoutCI{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -71,31 +73,25 @@ void BasicRenderSystem::render(FrameInfo& frameInfo)
 
     vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &frameInfo.descriptorSetTex, 0, nullptr);
     
+    VkDeviceAddress bufferAddress = mppRenderer.getCurrentShaderDataBufferDeviceAddress();
+
     for(auto & kv: frameInfo.gameObjects){
         auto& obj = kv.second;
         if(obj.model == nullptr) continue;
-        // SimplePushConstantData push{};
-        // push.modelMatrix = obj.transform.mat4();
-        // push.normalMatrix = obj.transform.normalMatrix();
 
-        // vkCmdPushConstants(
-        // frameInfo.commandBuffer,
-        // pipelineLayout,
-        // VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-        // 0,
-        // sizeof(SimplePushConstantData),
-        // &push);
+        PushConstants push{
+            .shaderDataAddress = bufferAddress,
+            .objectId = static_cast<uint32_t>(obj.getId())
+        };
 
         
         obj.model->bind(frameInfo.commandBuffer);
-        
     
         //access to data in shader data buffer(to to takie co resizable bar że przez wskaźnik że nie trzeba descriptorów. Znaczy to jest potrzebne do resizable bar, ale te dane przekazywane tutaj to co innego)
-        vkCmdPushConstants(frameInfo.commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(VkDeviceAddress), &mppRenderer.getCurrentShaderDataBufferDeviceAddress());
+        vkCmdPushConstants(frameInfo.commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push);
 
         obj.model->draw(frameInfo.commandBuffer);
     }
-
 
     /*
     These vkCmd* calls (and many others) set the current 
@@ -106,10 +102,6 @@ void BasicRenderSystem::render(FrameInfo& frameInfo)
     only have to call vkCmdBindDescriptorSets with another 
     set, while keeping the rest of the state.
     */
-
-    
-
-    
 }
 
 

@@ -31,9 +31,9 @@ struct MeshObjectData {
 struct ShaderData {
     float4x4 projection;
     float4x4 view;
-    float4x4 model[3];
     float4 lightPos;
     uint32_t selected;
+    uint3 _padding;
     MeshObjectData objectData[128];
 };
 
@@ -48,19 +48,27 @@ struct VSOutput {
     uint32_t InstanceIndex;
 };
 
+struct PushConstants {
+    ShaderData* shaderDataAddress;
+    uint32_t objectId;
+};
+
 // vertex shader
 [shader("vertex")]
-VSOutput main(VSInput input, uniform ShaderData *shaderData, uint instanceIndex: SV_VulkanInstanceID) { // SV_VulkanInstanceID to index instancji modelu obiektu podany przez vulkana
+VSOutput main(VSInput input, uniform PushConstants push){//, uint instanceIndex: SV_VulkanInstanceID) { // SV_VulkanInstanceID to index instancji modelu obiektu podany przez vulkana
     VSOutput output;
-    float4x4 modelMat = shaderData->model[instanceIndex];
-    output.Normal = mul((float3x3)mul(shaderData->view, modelMat), input.Normal);
+    uint objIdx = push.objectId;
+    float4x4 modelMat = push.shaderDataAddress->objectData[objIdx].modelMatrix;
+    float4x4 normMat = push.shaderDataAddress->objectData[objIdx].normalMatrix;
+    float3x3 normalMatrixView = (float3x3)mul(push.shaderDataAddress->view, normMat);
+    output.Normal = normalize(mul(normalMatrixView, input.Normal));
     output.UV = input.UV;
-    output.Pos = mul(shaderData->projection, mul(shaderData->view, mul(modelMat, float4(input.Pos.xyz, 1.0))));
-    output.Factor = (shaderData->selected == instanceIndex ? 3.0f : 1.0f); // wyróżniamy zaznaczony model
-    output.InstanceIndex = instanceIndex;
+    output.Pos = mul(push.shaderDataAddress->projection, mul(push.shaderDataAddress->view, mul(modelMat, float4(input.Pos.xyz, 1.0))));
+    output.Factor = (push.shaderDataAddress->selected == objIdx ? 3.0f : 1.0f); // wyróżniamy zaznaczony model
+    output.InstanceIndex = objIdx;
     // Calculate view vectors required for lighting
-    float4 fragPos = mul(mul(shaderData->view, modelMat), float4(input.Pos.xyz, 1.0));
-    output.LightVec = shaderData->lightPos.xyz - fragPos.xyz;
+    float4 fragPos = mul(mul(push.shaderDataAddress->view, modelMat), float4(input.Pos.xyz, 1.0));
+    output.LightVec = push.shaderDataAddress->lightPos.xyz - fragPos.xyz;
     output.ViewVec = -fragPos.xyz;
     return output;
 }

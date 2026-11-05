@@ -11,18 +11,21 @@ void App::loadGameObjects()
     auto object1{MppGameObject::createGameObject()};
     object1.model = mppModel;
     object1.texture = mppTexture;
+    object1.transform.translation = glm::vec3(-3.0f, 0.0f, 0.0f);
     gameObjects.emplace(object1.getId(), std::move(object1));
 
     mppTexture = mppLoader.createTextureFromFile("assets/suzanne1.ktx");
     auto object2{MppGameObject::createGameObject()};
     object2.model = mppModel;
     object2.texture = mppTexture;
+    object2.transform.translation = glm::vec3(0.0f, 0.0f, 0.0f);
     gameObjects.emplace(object2.getId(), std::move(object2));
 
     mppTexture = mppLoader.createTextureFromFile("assets/suzanne2.ktx");
     auto object3{MppGameObject::createGameObject()};
     object3.model = mppModel;
     object3.texture = mppTexture;
+    object3.transform.translation = glm::vec3(3.0f, 0.0f, 0.0f);
     gameObjects.emplace(object3.getId(), std::move(object3));
 
     mppLoader.initializeTextures();
@@ -64,6 +67,8 @@ void App::run()
         // Poll events ********************************
 
         
+
+        
         for (SDL_Event event; SDL_PollEvent(&event);)
         {
             switch (event.type)
@@ -78,10 +83,14 @@ void App::run()
                 //Rotate the selected object with mouse drag
                 case SDL_EVENT_MOUSE_MOTION:
                 {
-                    if(event.button.button == SDL_BUTTON_LEFT) 
+                    if(event.motion.state & SDL_BUTTON_LMASK) //event.button.button == SDL_BUTTON_LEFT
                     {
-                        objectRotations[shaderData.selected].x -= (float)event.motion.yrel * elapsedTime;
-                        objectRotations[shaderData.selected].y += (float)event.motion.xrel * elapsedTime;
+                        auto it = gameObjects.find(shaderData.selected);
+                        if (it != gameObjects.end()) {
+                            auto& obj = it->second;
+                            obj.transform.rotation.x -= (float)event.motion.yrel * elapsedTime;
+                            obj.transform.rotation.y += (float)event.motion.xrel * elapsedTime;
+                        }
                     }
                     break;
                 }
@@ -131,15 +140,20 @@ void App::run()
                 gameObjects
             };
 
+
             // Update shader data ********************************
             float aspect = mppRenderer.getAspectRatio();
             shaderData.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 32.0f);
             shaderData.view = glm::translate(glm::mat4(1.0f), camPos);
-            for (auto i = 0; i<3; i++) {
-                auto instancePos = glm::vec3((float)(i-1)*3.0f, 0.0f, 0.0f);
-                shaderData.model[i] = glm::translate(glm::mat4(1.0f), instancePos) * glm::mat4_cast(glm::quat(objectRotations[i]));
+            for (auto& [id, gameObject] : gameObjects) {
+                if (id >= std::size(shaderData.objectData)) break; //TODO: nie jestem pewien czy to nadal potrzebne
+                //shaderData.objectData[i].modelMatrix = glm::translate(glm::mat4(1.0f), instancePos) * glm::mat4_cast(glm::quat(objectRotations[i]));
+                shaderData.objectData[id].modelMatrix  = gameObject.transform.mat4();
+                shaderData.objectData[id].normalMatrix = gameObject.transform.normalMatrix();
             }
             mppRenderer.updateShaderData(shaderData);
+
+
 
             mppRenderer.beginSwapChainRenderPass(commandBuffer);
             
