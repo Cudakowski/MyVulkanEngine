@@ -41,7 +41,6 @@ public:
 
     MppDevice& mppDevice;
 
-    std::unique_ptr<MppModel> createModelFromFile(const std::string &file);
     std::unique_ptr<MppTexture> createTextureFromFile(const std::string &file);
     void initializeTextures();
     void loadShaders();

@@ -9,6 +9,9 @@
 #include "mpp_texture.hpp"
 #include "mpp_frame_info.hpp"
 #include "basic_render_system.hpp"
+#include "camera_controller.hpp"
+#include "scene_input_handler.hpp"
+#include "mpp_camera.hpp"
 
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
@@ -42,7 +45,6 @@ namespace mpp
 class App
 {
 private:
-    glm::vec3 camPos{0.0f, 0.0f, -6.0f}; // TODO: Przenieść
     MppWindow mppWindow{ "Ale jak to vulkan", 1280, 720};
     MppDevice mppDevice{mppWindow};
     MppRenderer mppRenderer{mppDevice,mppWindow};

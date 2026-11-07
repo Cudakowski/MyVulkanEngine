@@ -255,7 +255,7 @@ void MppRenderer::beginSwapChainRenderPass(VkCommandBuffer cb)
         .imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .clearValue{.color{0.0f, 0.0f, 0.2f, 1.0f}}
+        .clearValue{.color{0.05f, 0.05f, 0.05f, 1.0f}}
     };
     VkRenderingAttachmentInfo depthAttachmentInfo{
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
@@ -370,22 +370,6 @@ bool MppRenderer::hasStencilComponent(VkFormat format)
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || 
            format == VK_FORMAT_D24_UNORM_S8_UINT;
 }
-
-
-// void MppRenderer::conditionalRecreateSwapChain()
-// {
-//     if(updateSwapchain)
-//     {
-//         chk(vkDeviceWaitIdle(mppDevice.getLogicalDevice()));//czekanie aż gpu skończy działać
-//         mppWindow.updateWindowSize();
-    
-//         updateSwapchain = false;
-//         mppSwapChain->recreate();
-
-//     }
-    
-    
-// }
 
 
 void MppRenderer::createShaderDataBuffers()

@@ -2,11 +2,15 @@
 
 #include "mpp_device.hpp"
 
+
 #include "mpp_checks.hpp"
 
+#include <tiny_obj_loader.h>
 #include <glm/glm.hpp>
 //#include <glm/gtc/matrix_transform.hpp>
 //#include <glm/gtc/quaternion.hpp>
+
+#include <memory>
 
 namespace mpp
 {
@@ -19,8 +23,9 @@ private:
     
     VkBuffer vBuffer{VK_NULL_HANDLE};
     VmaAllocation vBufferAllocation{VK_NULL_HANDLE};
-    VkDeviceSize vBufSize{};
-    const VkDeviceSize indexCount;
+    VkDeviceSize indexDataOffset{};
+
+    const uint32_t indexCount{};
 
 public:
     struct Vertex {
@@ -28,16 +33,29 @@ public:
         glm::vec3 normal;
         glm::vec2 uv;
 
+        static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
+        static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
+
         bool operator==(const Vertex &other) const{
             return pos == other.pos && normal == other.normal && uv == other.uv;
         }
     };
 
-    MppModel(MppDevice& device, const std::vector<Vertex>& vertices, const std::vector<uint16_t>& indices, VkDeviceSize indCount);
-    ~MppModel()
+    struct Builder
     {
-        vmaDestroyBuffer(mppDevice.getAllocator(), vBuffer, vBufferAllocation);
-    }
+        std::vector<Vertex> vertices{};
+        std::vector<uint16_t> indices{};
+
+        void loadModel(const std::string &filepath);
+    };
+
+    MppModel(MppDevice &device, const MppModel::Builder &builder);
+    ~MppModel();
+
+    MppModel(const MppModel &)=delete;
+    MppModel &operator=(const MppModel &)=delete;
+
+    static std::unique_ptr<MppModel> createModelFromFile(MppDevice& device, const std::string &filepath);
 
     void bind(VkCommandBuffer commandBuffer);
     void draw(VkCommandBuffer commandBuffer);

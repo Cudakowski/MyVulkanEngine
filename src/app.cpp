@@ -6,7 +6,7 @@ namespace mpp
 
 void App::loadGameObjects()
 {
-    std::shared_ptr<MppModel> mppModel = mppLoader.createModelFromFile("assets/suzanne.obj");
+    std::shared_ptr<MppModel> mppModel = MppModel::createModelFromFile(mppDevice,"assets/suzanne.obj");
     std::shared_ptr<MppTexture> mppTexture = mppLoader.createTextureFromFile("assets/suzanne0.ktx");
     auto object1{MppGameObject::createGameObject()};
     object1.model = mppModel;
@@ -52,8 +52,14 @@ void App::run()
 
     ShaderData shaderData{};
 
-    glm::mat4 kek{};
-    sizeof(kek);
+    auto viewerObject = MppGameObject::createGameObject();
+    viewerObject.transform.translation.z = 6.0f;
+    viewerObject.transform.rotation.y = glm::pi<float>();
+    CameraController cameraController{};
+    SceneInputHandler sceneInputHandler{};
+    MppCamera camera{};
+    camera.setViewTarget(glm::vec3(-1.0f,-2.0f,2.0f),glm::vec3(0.0f,0.0f,2.5f));
+  
 
     uint64_t lastTime{ SDL_GetTicks() };
     bool quit{ false };
@@ -65,10 +71,6 @@ void App::run()
         
 
         // Poll events ********************************
-
-        
-
-        
         for (SDL_Event event; SDL_PollEvent(&event);)
         {
             switch (event.type)
@@ -80,42 +82,6 @@ void App::run()
                     break;
                 }
 
-                //Rotate the selected object with mouse drag
-                case SDL_EVENT_MOUSE_MOTION:
-                {
-                    if(event.motion.state & SDL_BUTTON_LMASK) //event.button.button == SDL_BUTTON_LEFT
-                    {
-                        auto it = gameObjects.find(shaderData.selected);
-                        if (it != gameObjects.end()) {
-                            auto& obj = it->second;
-                            obj.transform.rotation.x -= (float)event.motion.yrel * elapsedTime;
-                            obj.transform.rotation.y += (float)event.motion.xrel * elapsedTime;
-                        }
-                    }
-                    break;
-                }
-
-                // Zooming with the mouse wheel
-                case SDL_EVENT_MOUSE_WHEEL:
-                {
-                    camPos.z += (float)event.wheel.y * elapsedTime * 10.0f;
-                    break;
-                }
-
-                // Select active model instance
-                case SDL_EVENT_KEY_DOWN:
-                {
-                    if (event.key.key == SDLK_PLUS || event.key.key == SDLK_KP_PLUS)
-                    {
-                        shaderData.selected = (shaderData.selected < 2) ? shaderData.selected + 1 : 0;
-                    }
-                    if (event.key.key == SDLK_MINUS || event.key.key == SDLK_KP_MINUS)
-                    {
-                        shaderData.selected = (shaderData.selected > 0) ? shaderData.selected - 1 : 2;
-                    }
-                    break;
-                }
-
                 //window resize
                 case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: 
                 {
@@ -124,10 +90,16 @@ void App::run()
                 }
             
                 default:
+                    sceneInputHandler.handleEvent(event, elapsedTime, gameObjects, shaderData.selected);
                     break;
             }
         }
 
+        cameraController.update(elapsedTime, viewerObject);
+        camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
+        float aspect = mppRenderer.getAspectRatio();
+        camera.setPerspectiveProjection(glm::radians(45.f), aspect, 0.1f, 32.f);
+        
         if(auto commandBuffer = mppRenderer.beginFrame())
         {
             //int frameIndex = mppRenderer.getFrameIndex();
@@ -142,9 +114,12 @@ void App::run()
 
 
             // Update shader data ********************************
-            float aspect = mppRenderer.getAspectRatio();
-            shaderData.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 32.0f);
-            shaderData.view = glm::translate(glm::mat4(1.0f), camPos);
+            //shaderData.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 32.0f);
+            shaderData.projection = camera.getProjection();
+            shaderData.view = camera.getView();
+            shaderData.cameraPos = glm::vec4(viewerObject.transform.translation, 1.0f);
+            //shaderData.view = glm::inverse(viewerObject.transform.mat4());//glm::translate(glm::mat4(1.0f), camPos);
+            //shaderData.view = glm::translate(glm::mat4(1.0f), viewerObject.transform.translation);
             for (auto& [id, gameObject] : gameObjects) {
                 if (id >= std::size(shaderData.objectData)) break; //TODO: nie jestem pewien czy to nadal potrzebne
                 //shaderData.objectData[i].modelMatrix = glm::translate(glm::mat4(1.0f), instancePos) * glm::mat4_cast(glm::quat(objectRotations[i]));

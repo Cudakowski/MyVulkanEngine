@@ -92,27 +92,7 @@ void MppWindow::setWindowResized(int width, int height)
     windowSize.y = height;
 }
 
-// void MppWindow::updateWindowSize()
-// {
-//     if(!SDL_GetWindowSize(window, &windowSize.x, &windowSize.y))
-//     {
-//         throw std::runtime_error("failed to get window size2");
-//     }
-//     while (windowSize.x == 0 || windowSize.y == 0)
-//     {
-//         SDL_Event event;
-//         SDL_WaitEvent(&event);
-//         if(!SDL_GetWindowSize(window, &windowSize.x, &windowSize.y))
-//         {
-//             throw std::runtime_error("failed to get window size3");
-//         }
-//     }
-    
-//     // if(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mppDevice.getPhysicalDevice() , surface, &surfaceCaps) != VK_SUCCESS);
-//     // {
-//     //     throw std::runtime_error("failed to get surface capabilities2");
-//     // }
-// }
+
 
 } // namespace mpp
 

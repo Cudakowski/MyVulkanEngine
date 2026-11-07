@@ -1,0 +1,6 @@
+- [ ] Delete/improove mpp_checks
+- [ ] mpp_buffer
+- [ ] mpp_descriptors
+- [ ] Delete mpploader
+- [ ] Add profesional comments
+- [ ] Uprościć, aby tam gdzie się na nie podawać referencji do całych głównych obiektów tylko potrzebne rzeczy
