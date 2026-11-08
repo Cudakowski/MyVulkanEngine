@@ -4,7 +4,6 @@
 #include "mpp_window.hpp"
 #include "mpp_pipeline.hpp"
 #include "mpp_renderer.hpp"
-#include "mpp_loader.hpp"
 #include "mpp_game_object.hpp"
 #include "mpp_texture.hpp"
 #include "mpp_frame_info.hpp"
@@ -12,6 +11,7 @@
 #include "camera_controller.hpp"
 #include "scene_input_handler.hpp"
 #include "mpp_camera.hpp"
+#include "mpp_descriptors.hpp"
 
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
@@ -48,10 +48,16 @@ private:
     MppWindow mppWindow{ "Ale jak to vulkan", 1280, 720};
     MppDevice mppDevice{mppWindow};
     MppRenderer mppRenderer{mppDevice,mppWindow};
-    MppLoader mppLoader{mppDevice};
 
-    //std::unique_ptr<SspDescriptorPool> globalPool{}; //TODO: do zrobienia
+
+    std::unique_ptr<MppDescriptorPool> globalPool{};
+
+    VkDescriptorSet textureDescriptorSet{VK_NULL_HANDLE};
+    std::vector<std::unique_ptr<MppTexture>> textures{};
+    std::vector<VkDescriptorImageInfo> textureDescriptors{};
+
     MppGameObject::Map gameObjects;
+    std::unique_ptr<BasicRenderSystem> basicRenderSystem{};
 
     void loadGameObjects();
 

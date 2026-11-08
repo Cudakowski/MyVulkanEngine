@@ -28,7 +28,7 @@ public:
     using Map = std::unordered_map<id_t, MppGameObject>;
 
     std::shared_ptr<MppModel> model{};
-    std::shared_ptr<MppTexture> texture{};
+    uint32_t textureID{};
 
     static MppGameObject createGameObject()
     {

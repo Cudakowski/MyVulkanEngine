@@ -1,8 +1,5 @@
 #include "mpp_device.hpp"
 
-#include "mpp_checks.hpp"
-
-
 
 #include <iostream>
 #include <vector>
@@ -34,16 +31,16 @@ MppDevice::MppDevice(MppWindow& window): mppWindow{window}
 
 MppDevice::~MppDevice()
 {
-	vkDestroyCommandPool(device_, renderingCommandPool, nullptr);
-	vkDestroyCommandPool(device_, textureLoadingCommandPool, nullptr);
-	vmaDestroyAllocator(allocator);
+    vkDestroyCommandPool(device_, renderingCommandPool, nullptr);
+    vkDestroyCommandPool(device_, textureLoadingCommandPool, nullptr);
+    vmaDestroyAllocator(allocator);
     vkDestroyDevice(device_, nullptr);
 
     if (enableValidationLayers) {
         vkDestroyDebugUtilsMessengerEXT(instance, debugMessenger, nullptr); //zakomentowac dla fun'u
     }
     vkDestroySurfaceKHR(instance, surface, nullptr);
-	vkDestroyInstance(instance, nullptr);
+    vkDestroyInstance(instance, nullptr);
     
 }
 
@@ -92,9 +89,9 @@ void MppDevice::createCommandPool()
 void MppDevice::checkAssets()
 {
     // Make sure asset folder is present from the current working directory
-	if (!std::filesystem::is_directory("assets")) {
-		throw std::runtime_error("Could not locate assets folder from current working directory\n");
-	}
+    if (!std::filesystem::is_directory("assets")) {
+        throw std::runtime_error("Could not locate assets folder from current working directory\n");
+    }
 }
 
 void MppDevice::vmaSetup()
@@ -175,6 +172,8 @@ void MppDevice::deviceSetup()
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
         .descriptorIndexing = VK_TRUE,
         .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,// coś o indeksowaniu descriptorów
+        .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,// Pozwala aktualizować deskryptory w locie
+        .descriptorBindingPartiallyBound = VK_TRUE,
         .descriptorBindingVariableDescriptorCount = VK_TRUE,// coś o indeksowaniu descriptorów
         .runtimeDescriptorArray = VK_TRUE,// coś o indeksowaniu descriptorów
         .bufferDeviceAddress = VK_TRUE
@@ -187,8 +186,12 @@ void MppDevice::deviceSetup()
         .dynamicRendering = VK_TRUE // to to ten hehe :D
     };
     
-    VkPhysicalDeviceFeatures enabledVk10Features{
-        .samplerAnisotropy = VK_TRUE // lepsze filterowanie tekstur(cokolwiek to znaczy)
+    VkPhysicalDeviceFeatures2 enabledFeatures2{
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = &enabledVk13Features,
+        .features = {//enabledVk10Features
+            .samplerAnisotropy = VK_TRUE // Filtrowanie anizotropowe (ostrzejsze tekstury pod kątem)
+        }
     };
 
     /*
@@ -202,14 +205,14 @@ void MppDevice::deviceSetup()
     // tworzenie logical device
     VkDeviceCreateInfo deviceCI{
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = &enabledVk13Features,
+        .pNext = &enabledFeatures2,
         .queueCreateInfoCount = static_cast<uint32_t>(queueCIs.size()),
         .pQueueCreateInfos = queueCIs.data(),
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = nullptr,
         .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
         .ppEnabledExtensionNames = deviceExtensions.data(),
-        .pEnabledFeatures = &enabledVk10Features
+        .pEnabledFeatures = nullptr
     };
 
     // might not really be necessary anymore because device specific validation layers
@@ -297,7 +300,7 @@ void MppDevice::detectingDevice()
 
 void MppDevice::createInstance()
 {
-	if(volkInitialize() != VK_SUCCESS)
+    if(volkInitialize() != VK_SUCCESS)
     {
         throw std::runtime_error("failed to initialize volk");
     }
@@ -364,7 +367,7 @@ void MppDevice::createInstance()
         throw std::runtime_error("failed to create instance!");
     }
 
-	volkLoadInstance(instance);//co
+    volkLoadInstance(instance);//co
 }
 
 bool MppDevice::checkValidationLayerSupport() 

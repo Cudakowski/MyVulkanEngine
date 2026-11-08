@@ -10,7 +10,6 @@ set(SOURCES
     mpp_descriptors.cpp
     mpp_device.cpp
     mpp_game_object.cpp
-    mpp_loader.cpp
     mpp_model.cpp
     mpp_pipeline.cpp
     mpp_renderer.cpp

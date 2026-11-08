@@ -3,13 +3,14 @@
 
 #include "mpp_device.hpp"
 #include "mpp_model.hpp"
-#include "mpp_loader.hpp"
 #include "mpp_renderer.hpp"
 
 #include "mpp_checks.hpp"
 
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
+
+#include <cstring>
 
 namespace mpp
 {
@@ -38,16 +39,15 @@ class MppPipeline
 {
 private:
     MppDevice& mppDevice;
-    MppLoader& mppLoader;
-    MppRenderer& mppRenderer;
 
     VkPipeline pipeline{ VK_NULL_HANDLE };
-    // VkShaderModule vertShaderModule;
-    // VkShaderModule fragShaderModule;
-    // void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
+    VkShaderModule shaderModule{};//TODO: Podzielić to kiedy będzie to potrzebne
+    // VkShaderModule vertShaderModule{};
+    // VkShaderModule fragShaderModule{};
+    void createShaderModule(const std::vector<uint32_t>& data, VkShaderModule& shaderModule);
 public:
 
-    MppPipeline(MppDevice& device, MppLoader& loader, MppRenderer& renderer,const PipelineConfigInfo& configInfo,const VkPipelineLayout &pipelineLayout);
+    MppPipeline(MppDevice& device,const PipelineConfigInfo& configInfo,const VkPipelineLayout &pipelineLayout, const VkFormat& swapChainImageFormat, VkFormat swapChainDepthFormat);
     ~MppPipeline();
 
     MppPipeline(const MppPipeline&) = delete;

@@ -4,68 +4,6 @@
 namespace mpp
 {
 
-// void MppSwapChain::recreate()
-// {
-    
-//     auto windowSize = mppWindow.getWindowSize();
-//     swapchainCI.oldSwapchain = swapchain;
-//     swapchainCI.imageExtent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y)};
-//     chk(vkCreateSwapchainKHR(mppDevice.getLogicalDevice(), &swapchainCI, nullptr, &swapchain));
-
-//     for(auto i = 0; i< imageCount; i++)
-//     {
-//         vkDestroyImageView(mppDevice.getLogicalDevice(), swapchainImageViews[i], nullptr);
-//     }
-
-//     chk(vkGetSwapchainImagesKHR(mppDevice.getLogicalDevice(), swapchain, &imageCount, nullptr));
-//     swapchainImages.resize(imageCount);
-//     chk(vkGetSwapchainImagesKHR(mppDevice.getLogicalDevice(), swapchain, &imageCount, swapchainImages.data()));
-    
-//     swapchainImageViews.resize(imageCount);
-
-//     for(auto i = 0; i< imageCount; i++)
-//     {
-//         VkImageViewCreateInfo viewCI{
-//             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-//             .image = swapchainImages[i],
-//             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-//             .format = imageFormat,
-//             .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1}
-//         };
-//         chk(vkCreateImageView(mppDevice.getLogicalDevice(), &viewCI, nullptr, &swapchainImageViews[i]));
-//     }
-
-//     for(auto& semaphore : renderCompleteSemaphores)
-//     {
-//         vkDestroySemaphore(mppDevice.getLogicalDevice(), semaphore, nullptr);
-//     }
-//     renderCompleteSemaphores.resize(imageCount);
-//     for(auto& semaphore : renderCompleteSemaphores)
-//     {
-//         chk(vkCreateSemaphore(mppDevice.getLogicalDevice(), &semaphoreCI, nullptr, &semaphore));
-//     }
-
-//     vkDestroySwapchainKHR(mppDevice.getLogicalDevice(), swapchainCI.oldSwapchain, nullptr);
-    
-//     vmaDestroyImage(mppDevice.getAllocator(), depthImage, depthImageAllocation);
-//     vkDestroyImageView(mppDevice.getLogicalDevice(), depthImageView, nullptr);
-
-//     depthImageCI.extent = {.width = static_cast<uint32_t>(windowSize.x), .height = static_cast<uint32_t>(windowSize.y), .depth = 1 };
-//     VmaAllocationCreateInfo allocCI{
-//         .flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-//         .usage = VMA_MEMORY_USAGE_AUTO
-//     };
-//     chk(vmaCreateImage(mppDevice.getAllocator(), &depthImageCI, &allocCI, &depthImage, &depthImageAllocation, nullptr));
-    
-//     VkImageViewCreateInfo viewCI{
-//         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-//         .image = depthImage,
-//         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-//         .format = depthFormat,
-//         .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .levelCount = 1, .layerCount = 1}
-//     };
-//     chk(vkCreateImageView(mppDevice.getLogicalDevice(), &viewCI, nullptr, &depthImageView));
-// }
 
 MppSwapChain::MppSwapChain(MppDevice &device, VkExtent2D winExtent): mppDevice{device}, windowExtent{winExtent}
 {
@@ -107,7 +45,7 @@ MppSwapChain::~MppSwapChain()
         vkDestroyImageView(mppDevice.getLogicalDevice(), swapchainImageViews[i], nullptr);
     }
 
-	vkDestroySwapchainKHR(mppDevice.getLogicalDevice(), swapchain, nullptr);
+    vkDestroySwapchainKHR(mppDevice.getLogicalDevice(), swapchain, nullptr);
     
 }
 

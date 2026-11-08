@@ -3,6 +3,8 @@
 #include "mpp_game_object.hpp"
 #include <SDL3/SDL.h>
 #include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
+#include <limits>
 
 namespace mpp
 {

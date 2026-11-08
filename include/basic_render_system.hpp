@@ -3,8 +3,8 @@
 #include "mpp_device.hpp"
 #include "mpp_pipeline.hpp"
 #include "mpp_renderer.hpp"
-#include "mpp_loader.hpp"
 #include "mpp_frame_info.hpp"
+#include "mpp_descriptors.hpp"
 
 #include <memory>
 
@@ -15,17 +15,17 @@ class BasicRenderSystem
 {
 private:
     void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);
-    void createPipeline();
+    void createPipeline(VkFormat swapChainImageFormat, VkFormat swapChainDepthFormat);
 
     MppDevice &mppDevice;
-    MppRenderer &mppRenderer;
-    MppLoader &mppLoader;
+
+
     std::unique_ptr<MppPipeline> mppPipeline;
     VkPipelineLayout pipelineLayout;
 
 
 public:
-    BasicRenderSystem(MppDevice &device, MppRenderer &renderer, MppLoader &loader);
+    BasicRenderSystem(MppDevice &device, const VkFormat& swapChainImageFormat, VkFormat swapChainDepthFormat, VkDescriptorSetLayout descriptorSetLayout);
     ~BasicRenderSystem();
 
     BasicRenderSystem(const BasicRenderSystem &) = delete;
@@ -33,7 +33,7 @@ public:
 
     void render(FrameInfo& frameInfo);
 
-
+    static std::unique_ptr<MppDescriptorSetLayout> createTextureSetLayout(MppDevice& device, uint32_t maxTextures);
 };
 
 

@@ -1,13 +1,11 @@
 #include "basic_render_system.hpp"
 
-#include "mpp_frame_info.hpp"
-
 namespace mpp
 {
-BasicRenderSystem::BasicRenderSystem(MppDevice &device, MppRenderer &renderer, MppLoader &loader): mppDevice{device}, mppRenderer{renderer}, mppLoader{loader}
+BasicRenderSystem::BasicRenderSystem(MppDevice &device, const VkFormat& swapChainImageFormat, VkFormat swapChainDepthFormat, VkDescriptorSetLayout descriptorSetLayout): mppDevice{device}
 {
-    createPipelineLayout(mppLoader.getDescriptorSetLayoutTex());
-    createPipeline();
+    createPipelineLayout(descriptorSetLayout);
+    createPipeline(swapChainImageFormat, swapChainDepthFormat);
 }
 
 BasicRenderSystem::~BasicRenderSystem()
@@ -51,7 +49,7 @@ void BasicRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayo
     }
 }
 
-void BasicRenderSystem::createPipeline()
+void BasicRenderSystem::createPipeline(VkFormat swapChainImageFormat, VkFormat swapChainDepthFormat)
 {
     assert( pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 
@@ -60,10 +58,10 @@ void BasicRenderSystem::createPipeline()
 
     mppPipeline = std::make_unique<MppPipeline>(
         mppDevice,
-        mppLoader,
-        mppRenderer,
         pipelineConfig,
-        pipelineLayout
+        pipelineLayout,
+        swapChainImageFormat,
+        swapChainDepthFormat
     );
 }
 
@@ -73,7 +71,7 @@ void BasicRenderSystem::render(FrameInfo& frameInfo)
 
     vkCmdBindDescriptorSets(frameInfo.commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &frameInfo.descriptorSetTex, 0, nullptr);
     
-    VkDeviceAddress bufferAddress = mppRenderer.getCurrentShaderDataBufferDeviceAddress();
+    VkDeviceAddress bufferAddress = frameInfo.bufferAddress;
 
     for(auto & kv: frameInfo.gameObjects){
         auto& obj = kv.second;
@@ -104,5 +102,16 @@ void BasicRenderSystem::render(FrameInfo& frameInfo)
     */
 }
 
+std::unique_ptr<MppDescriptorSetLayout> BasicRenderSystem::createTextureSetLayout(MppDevice& device, uint32_t maxTextures) {
+    return MppDescriptorSetLayout::Builder(device)
+        .addBinding(
+            0,
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            VK_SHADER_STAGE_FRAGMENT_BIT,
+            maxTextures,
+            VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT// TODO: dodać VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT kiedy będzie się robić łądowanie tekstur w tracie działania programu
+        )
+        .build();
+}
 
 } // namespace mpp

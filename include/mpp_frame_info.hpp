@@ -38,6 +38,7 @@ struct FrameInfo {
     //SspCamera &camera;
     VkDescriptorSet descriptorSetTex;
     MppGameObject::Map &gameObjects;
+    VkDeviceAddress bufferAddress;
 };
 
 

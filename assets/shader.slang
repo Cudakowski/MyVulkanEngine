@@ -17,7 +17,7 @@ it easier to read (and edit) the shader.
 struct VSInput {
     float3 Pos;
     float3 Normal;
-	float2 UV;
+    float2 UV;
 };
 
 // TEKSTURYYYY!!!!!!!!! :OOOOOOOOO

@@ -29,7 +29,7 @@ MppWindow::MppWindow( std::string name, int width, int height)
     {
         throw std::runtime_error("failed to initialize SDL");
     }
-	if(!SDL_Vulkan_LoadLibrary(NULL))
+    if(!SDL_Vulkan_LoadLibrary(NULL))
     {
         throw std::runtime_error("failed to load vulkan library");
     }

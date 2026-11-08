@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mpp_window.hpp"
+#include "mpp_checks.hpp"
 
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>

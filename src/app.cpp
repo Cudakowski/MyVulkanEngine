@@ -6,38 +6,46 @@ namespace mpp
 
 void App::loadGameObjects()
 {
-    std::shared_ptr<MppModel> mppModel = MppModel::createModelFromFile(mppDevice,"assets/suzanne.obj");
-    std::shared_ptr<MppTexture> mppTexture = mppLoader.createTextureFromFile("assets/suzanne0.ktx");
+    std::shared_ptr<MppModel> mppModel = MppModel::createModelFromFile(mppDevice, "assets/suzanne.obj");
+    
+
+    std::unique_ptr<MppTexture> mppTexture = MppTexture::createTextureFromFile(mppDevice, "assets/suzanne0.ktx");
+    textureDescriptors.push_back(mppTexture->getDescriptorInfo());
+    textures.push_back(std::move(mppTexture));
+    
     auto object1{MppGameObject::createGameObject()};
     object1.model = mppModel;
-    object1.texture = mppTexture;
+    object1.textureID = 0;
     object1.transform.translation = glm::vec3(-3.0f, 0.0f, 0.0f);
     gameObjects.emplace(object1.getId(), std::move(object1));
 
-    mppTexture = mppLoader.createTextureFromFile("assets/suzanne1.ktx");
+
+    mppTexture = MppTexture::createTextureFromFile(mppDevice, "assets/suzanne1.ktx");
+    textureDescriptors.push_back(mppTexture->getDescriptorInfo());
+    textures.push_back(std::move(mppTexture));
+
     auto object2{MppGameObject::createGameObject()};
     object2.model = mppModel;
-    object2.texture = mppTexture;
+    object2.textureID = 1;
     object2.transform.translation = glm::vec3(0.0f, 0.0f, 0.0f);
     gameObjects.emplace(object2.getId(), std::move(object2));
 
-    mppTexture = mppLoader.createTextureFromFile("assets/suzanne2.ktx");
+
+    mppTexture = MppTexture::createTextureFromFile(mppDevice, "assets/suzanne2.ktx");
+    textureDescriptors.push_back(mppTexture->getDescriptorInfo());
+    textures.push_back(std::move(mppTexture));
+    
     auto object3{MppGameObject::createGameObject()};
     object3.model = mppModel;
-    object3.texture = mppTexture;
+    object3.textureID = 2;
     object3.transform.translation = glm::vec3(3.0f, 0.0f, 0.0f);
     gameObjects.emplace(object3.getId(), std::move(object3));
-
-    mppLoader.initializeTextures();
 }
 
 
 App::App(/* args */)
 {
     loadGameObjects();    
-    mppLoader.loadShaders();
-
-
 }
 
 App::~App()
@@ -47,7 +55,27 @@ App::~App()
 
 void App::run()
 {
-    BasicRenderSystem basicRenderSystem{mppDevice, mppRenderer, mppLoader };
+
+    const uint32_t texCount = static_cast<uint32_t>(textureDescriptors.size());
+
+    auto textureLayout = BasicRenderSystem::createTextureSetLayout(mppDevice, texCount);
+
+    globalPool = MppDescriptorPool::Builder(mppDevice)
+        .setMaxSets(10)
+        .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texCount)
+        .build();
+
+    MppDescriptorWriter(*textureLayout, *globalPool)
+        .writeImageArray(0, textureDescriptors.data(), texCount)
+        .build(textureDescriptorSet, texCount);
+
+    basicRenderSystem = std::make_unique<BasicRenderSystem>(
+        mppDevice, 
+        mppRenderer.getSwapChainImageFormat(),
+        mppRenderer.getSwapChainDepthFormat(),
+        textureLayout->getDescriptorSetLayout()
+    );
+
 
 
     ShaderData shaderData{};
@@ -108,8 +136,9 @@ void App::run()
                 elapsedTime, 
                 commandBuffer, 
                 //camera, 
-                mppLoader.getDescriptorSetTex(),
-                gameObjects
+                textureDescriptorSet,
+                gameObjects,
+                mppRenderer.getCurrentShaderDataBufferDeviceAddress()
             };
 
 
@@ -132,7 +161,7 @@ void App::run()
 
             mppRenderer.beginSwapChainRenderPass(commandBuffer);
             
-            basicRenderSystem.render(frameInfo);
+            basicRenderSystem->render(frameInfo);
 
             mppRenderer.endSwapChainRenderPass(commandBuffer);
             mppRenderer.endFrame(commandBuffer);

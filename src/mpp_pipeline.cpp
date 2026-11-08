@@ -1,13 +1,121 @@
 #include "mpp_pipeline.hpp"
 
+#include "slang/slang.h"
+#include "slang/slang-com-ptr.h"
+#include <filesystem>
+#include <fstream>
+
 namespace mpp
 {
+
+void loadShaders(std::vector<uint32_t> &spirvData)//TODO: Lepiej zaprojektować
+{
+    // LOADING SHADERS =====================================================
+    
+    // kumpilowanie slanga do SPIR-V w runtimie :D (TODO:: tylko na czas developement'u i do edytora(ryyko bezpieczeństwa))
+    // SPIR-V to taki pośredniczący język shaderów który vulkan umie czytać. 
+    // GLSL też do niego najpierw sie kompiluje.
+    Slang::ComPtr<slang::IGlobalSession> slangGlobalSession;
+
+    const std::filesystem::path sourcePath = "assets/shader.slang";
+    const std::filesystem::path cachePath  = "assets/shader.spv";
+
+    
+    bool needsCompilation = true;
+
+
+    //pobieranie już skompilowanego pliku jeżeli istnieje i nie jest stary
+    if (std::filesystem::exists(cachePath) && std::filesystem::exists(sourcePath)) {
+        auto sourceTime = std::filesystem::last_write_time(sourcePath);
+        auto cacheTime  = std::filesystem::last_write_time(cachePath);
+
+        if (cacheTime >= sourceTime) {
+            std::ifstream file(cachePath, std::ios::binary | std::ios::ate);
+            size_t size = file.tellg();
+            file.seekg(0);
+            spirvData.resize(size / sizeof(uint32_t));
+            file.read(reinterpret_cast<char*>(spirvData.data()), size);
+            needsCompilation = false;
+            std::cout<<"Loaded shader\n";
+        }
+    }
+    if(needsCompilation)
+    {
+
+        // tworzenie globalnej sesji
+        slang::createGlobalSession(slangGlobalSession.writeRef());
+        
+        // tworzenie takiej o sesji xd
+        auto slangTargets{ std::to_array<slang::TargetDesc>({ {
+            .format{SLANG_SPIRV},
+            .profile{slangGlobalSession->findProfile("spirv_1_4")}
+        } })};
+        auto slangOptions{std::to_array<slang::CompilerOptionEntry>({ {
+            slang::CompilerOptionName::EmitSpirvDirectly,
+            {slang::CompilerOptionValueKind::Int, 1}
+        } })};
+        slang::SessionDesc slangSessionDesc{
+            .targets{slangTargets.data()},
+            .targetCount{SlangInt(slangTargets.size())},
+            .defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR,
+            .compilerOptionEntries{slangOptions.data()},
+            .compilerOptionEntryCount{uint32_t(slangOptions.size())}
+        };
+        Slang::ComPtr<slang::ISession> slangSession;
+        slangGlobalSession->createSession(slangSessionDesc, slangSession.writeRef());
+    
+        // loading texture shader
+        Slang::ComPtr<slang::IModule> slangModule{
+            slangSession->loadModuleFromSource("triangle", sourcePath.string().c_str(), nullptr, nullptr)
+        };
+        Slang::ComPtr<ISlangBlob> spirv;
+        slangModule->getTargetCode(0, spirv.writeRef());
+    
+        //zapisywanie
+        size_t byteSize = spirv->getBufferSize();
+        spirvData.resize(byteSize / sizeof(uint32_t));
+        std::memcpy(spirvData.data(), spirv->getBufferPointer(), byteSize);
+
+        std::ofstream outFile(cachePath, std::ios::binary);
+        outFile.write(reinterpret_cast<const char*>(spirv->getBufferPointer()), byteSize);
+        std::cout<<"Compiled shader\n";
+    }
+
+    
+}
+
+void MppPipeline::createShaderModule(const std::vector<uint32_t>& data, VkShaderModule& shaderModule)
+{
+    // tworzenie modułu shadera (kontener na skompilowany SPRI-V)
+    VkShaderModuleCreateInfo shaderModuleCI{
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = data.size() * sizeof(uint32_t),
+        .pCode = data.data()
+    };
+
+    if (vkCreateShaderModule(mppDevice.getLogicalDevice(), &shaderModuleCI, nullptr, &shaderModule) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create shader module");
+    }
+    /* To do nowszej wersji vulkana
+    The VK_KHR_maintenance5 extension, which became core with 
+    Vulkan 1.4, deprecated shader modules. It allows direct 
+    passing of VkShaderModuleCreateInfo to the pipeline's 
+    shader stage create info.
+    */
+
+    // THE SHADER =============================================
+
+    // (pacz shader w assetach)
+}
+
 MppPipeline::~MppPipeline()
 {
+    vkDestroyShaderModule(mppDevice.getLogicalDevice(), shaderModule, nullptr);
     vkDestroyPipeline(mppDevice.getLogicalDevice(), pipeline, nullptr);
 }
 
-MppPipeline::MppPipeline(MppDevice& device, MppLoader& loader, MppRenderer& renderer,const PipelineConfigInfo& configInfo, const VkPipelineLayout &pipelineLayout): mppDevice{device}, mppLoader{loader}, mppRenderer{renderer}
+MppPipeline::MppPipeline(MppDevice& device,const PipelineConfigInfo& configInfo, const VkPipelineLayout &pipelineLayout, const VkFormat& swapChainImageFormat, VkFormat swapChainDepthFormat): mppDevice{device}
 {
     assert(pipelineLayout != VK_NULL_HANDLE && "cannot create graphics pipeline:: no pipelineLayout provided in configInfo");
 
@@ -44,6 +152,11 @@ MppPipeline::MppPipeline(MppDevice& device, MppLoader& loader, MppRenderer& rend
     //     .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
     //     .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
     // };
+    std::vector<uint32_t> spirvData{};
+    loadShaders(spirvData);
+    createShaderModule(spirvData,shaderModule);
+
+    
 
     // podłaczenie shaderów do pipeline'a
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages{//////////////
@@ -52,7 +165,7 @@ MppPipeline::MppPipeline(MppDevice& device, MppLoader& loader, MppRenderer& rend
             .pNext = nullptr,
             .flags = 0,
             .stage = VK_SHADER_STAGE_VERTEX_BIT,
-            .module = mppLoader.getShaderModule(), 
+            .module = shaderModule, 
             .pName = "main",
             .pSpecializationInfo = nullptr, },
         {
@@ -60,7 +173,7 @@ MppPipeline::MppPipeline(MppDevice& device, MppLoader& loader, MppRenderer& rend
             .pNext = nullptr,
             .flags = 0,
             .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .module = mppLoader.getShaderModule(), 
+            .module = shaderModule, 
             .pName = "main",
             .pSpecializationInfo = nullptr, }
     };  
@@ -98,8 +211,8 @@ MppPipeline::MppPipeline(MppDevice& device, MppLoader& loader, MppRenderer& rend
     VkPipelineRenderingCreateInfo renderingCI{///////////////////////////////////////
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount =1,
-        .pColorAttachmentFormats = &(mppRenderer.getSwapChainImageFormat()),
-        .depthAttachmentFormat =mppRenderer.getSwapChainDepthFormat()
+        .pColorAttachmentFormats = &swapChainImageFormat,
+        .depthAttachmentFormat =swapChainDepthFormat
     };
 
     // //nie będzie to używane ale trzeba to uspecyfikować jakimiś domyślnymi wartościami

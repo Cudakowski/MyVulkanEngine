@@ -1,6 +1,5 @@
 #include "camera_controller.hpp"
-#include <glm/gtc/constants.hpp>
-#include <limits>
+
 
 namespace mpp
 {
