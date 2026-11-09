@@ -3,7 +3,7 @@
 namespace mpp
 {
 
-void SceneInputHandler::handleEvent(const SDL_Event& event, float dt, MppGameObject::Map& gameObjects, uint32_t& selectedId) 
+void SceneInputHandler::handleEvent(const SDL_Event& event, float dt, MppGameObject::Map& gameObjects, uint32_t& selectedId)const 
 {
     switch (event.type) {
 

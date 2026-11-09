@@ -2,10 +2,10 @@
 
 #include "mpp_device.hpp"
 #include "mpp_pipeline.hpp"
-#include "mpp_renderer.hpp"
-#include "mpp_frame_info.hpp"
 #include "mpp_descriptors.hpp"
+#include "mpp_frame_info.hpp"
 
+// std
 #include <memory>
 
 namespace mpp
@@ -31,7 +31,7 @@ public:
     BasicRenderSystem(const BasicRenderSystem &) = delete;
     BasicRenderSystem &operator=(const BasicRenderSystem &) = delete;
 
-    void render(FrameInfo& frameInfo);
+    void render(FrameInfo& frameInfo)const;
 
     static std::unique_ptr<MppDescriptorSetLayout> createTextureSetLayout(MppDevice& device, uint32_t maxTextures);
 };

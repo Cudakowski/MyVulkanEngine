@@ -1,9 +1,13 @@
 #pragma once
 
 #include "mpp_game_object.hpp"
+
+// libs
 #include <SDL3/SDL.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
+
+// std
 #include <limits>
 
 namespace mpp
@@ -29,7 +33,7 @@ public:
     };
 
     // Obsługa ciągłego ruchu (WASD / strzałki) wywoływana co klatkę
-    void update(float dt, MppGameObject& viewerObject);
+    void update(float dt, MppGameObject& viewerObject)const;
 
     KeyMappings keys{};
     float moveSpeed{3.0f};

@@ -3,13 +3,13 @@
 
 #include "mpp_device.hpp"
 #include "mpp_model.hpp"
-#include "mpp_renderer.hpp"
-
 #include "mpp_checks.hpp"
 
+// libs
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
 
+// std
 #include <cstring>
 
 namespace mpp
@@ -44,7 +44,7 @@ private:
     VkShaderModule shaderModule{};//TODO: Podzielić to kiedy będzie to potrzebne
     // VkShaderModule vertShaderModule{};
     // VkShaderModule fragShaderModule{};
-    void createShaderModule(const std::vector<uint32_t>& data, VkShaderModule& shaderModule);
+    void createShaderModule(const std::vector<uint32_t>& data, VkShaderModule& shaderModule)const;
 public:
 
     MppPipeline(MppDevice& device,const PipelineConfigInfo& configInfo,const VkPipelineLayout &pipelineLayout, const VkFormat& swapChainImageFormat, VkFormat swapChainDepthFormat);
@@ -54,7 +54,7 @@ public:
     MppPipeline& operator=(const MppPipeline&) = delete;
     
 
-    void bind(VkCommandBuffer commandBuffer);
+    void bind(VkCommandBuffer commandBuffer)const;
     static void defaultPipelineConfigInfo(PipelineConfigInfo& configInfo);
     static void enableAlphaBlending(PipelineConfigInfo& configInfo); //TODO
 };

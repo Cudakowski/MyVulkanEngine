@@ -3,7 +3,8 @@
 namespace mpp
 {
 
-glm::mat4 TransformComponent::mat4() {
+glm::mat4 TransformComponent::mat4() const
+{
     const float c3 = glm::cos(rotation.z);
     const float s3 = glm::sin(rotation.z);
     const float c2 = glm::cos(rotation.x);
@@ -18,7 +19,8 @@ glm::mat4 TransformComponent::mat4() {
     };
 }
 
-glm::mat3 TransformComponent::normalMatrix(){
+glm::mat3 TransformComponent::normalMatrix() const
+{
     const float c3 = glm::cos(rotation.z);
     const float s3 = glm::sin(rotation.z);
     const float c2 = glm::cos(rotation.x);

@@ -5,6 +5,7 @@
 #include "mpp_frame_info.hpp"
 #include "mpp_checks.hpp"
 
+// std
 #include <vector>
 #include <memory>
 
@@ -37,8 +38,8 @@ private:
 
     std::vector<VkSemaphore> renderCompleteSemaphores;
 
-    VkFormat imageFormat{VK_FORMAT_B8G8R8A8_SRGB };//TODO nie inicjalizować tylko sprawdzać
-    VkFormat depthFormat{ VK_FORMAT_UNDEFINED };//TODO nie inicjalizować tylko sprawdzać
+    VkFormat imageFormat{VK_FORMAT_B8G8R8A8_SRGB };
+    VkFormat depthFormat{ VK_FORMAT_UNDEFINED };
     
 
     uint32_t imageCount{ 0 };
@@ -51,36 +52,35 @@ private:
 
 
     VkFormat findDepthFormat();
-    VkSurfaceFormatKHR chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR> &availableFormats);
-    VkPresentModeKHR chooseSwapPresentMode( const std::vector<VkPresentModeKHR> &availablePresentModes);
-    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
+    VkSurfaceFormatKHR chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR> &availableFormats)const;
+    VkPresentModeKHR chooseSwapPresentMode( const std::vector<VkPresentModeKHR> &availablePresentModes)const;
+    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities)const;
 
 public:
     MppSwapChain(MppDevice &device, VkExtent2D windowExtent);
     MppSwapChain(MppDevice &device, VkExtent2D windowExtent,std::shared_ptr<MppSwapChain> previous);
-    //void recreate();
     ~MppSwapChain();
 
     MppSwapChain(const MppSwapChain &) = delete;
     MppSwapChain &operator=(const MppSwapChain &) = delete;
 
-    const VkFormat& getImageFormat(){return imageFormat;}
-    VkFormat getDepthFormat(){return depthFormat;}
+    const VkFormat& getImageFormat()const{return imageFormat;}
+    VkFormat getDepthFormat()const{return depthFormat;}
 
-    VkResult acquireNextImage(uint32_t& imageIndex, VkFence fence, VkSemaphore imageAcquiredSemaphore);
-    VkResult submitCommandBuffer(VkCommandBuffer cb,uint32_t& imageIndex, VkFence fence, VkSemaphore imageAcquiredSemaphore);
+    VkResult acquireNextImage(uint32_t& imageIndex, VkFence fence, VkSemaphore imageAcquiredSemaphore)const;
+    VkResult submitCommandBuffer(VkCommandBuffer cb,uint32_t& imageIndex, VkFence fence, VkSemaphore imageAcquiredSemaphore)const;
 
-    VkImage getCurrentSwapchainImage(uint32_t& imageIndex){return swapchainImages[imageIndex];}
-    VkImageView getCurrentSwapchainImageView(uint32_t& imageIndex){return swapchainImageViews[imageIndex];}
-    VkImage getDepthImage(uint32_t frameIndex){return depthImages[frameIndex];}
-    VkImageView getDepthImageView(uint32_t frameIndex){return depthImageViews[frameIndex];}
-    VkExtent2D getSwapChainExtent() { return swapChainExtent; }
+    VkImage getCurrentSwapchainImage(uint32_t& imageIndex)const{return swapchainImages[imageIndex];}
+    VkImageView getCurrentSwapchainImageView(uint32_t& imageIndex)const{return swapchainImageViews[imageIndex];}
+    VkImage getDepthImage(uint32_t frameIndex)const{return depthImages[frameIndex];}
+    VkImageView getDepthImageView(uint32_t frameIndex)const{return depthImageViews[frameIndex];}
+    VkExtent2D getSwapChainExtent()const { return swapChainExtent; }
 
     bool compareSwapFormats(const MppSwapChain &swapChain) const {
         return swapChain.depthFormat == depthFormat &&
             swapChain.imageFormat == imageFormat;
     }
-    float extentAspectRatio() {
+    float extentAspectRatio()const {
         return static_cast<float>(swapChainExtent.width) /
               static_cast<float>(swapChainExtent.height);
     }

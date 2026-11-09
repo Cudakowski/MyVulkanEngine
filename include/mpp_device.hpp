@@ -3,14 +3,18 @@
 #include "mpp_window.hpp"
 #include "mpp_checks.hpp"
 
+// libs
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <vma/vk_mem_alloc.h>
 
+// std
 #include <vector>
 #include <set>
+#include <iostream>
+#include <cassert>
 
 namespace mpp
 {
@@ -25,7 +29,7 @@ struct QueueFamilyIndices {
     uint32_t presentFamily;
     bool graphicsFamilyHasValue = false;
     bool presentFamilyHasValue = false;
-    bool isComplete() { return graphicsFamilyHasValue && presentFamilyHasValue; }
+    bool isComplete()const { return graphicsFamilyHasValue && presentFamilyHasValue; }
 };
 
 class MppDevice 
@@ -33,7 +37,6 @@ class MppDevice
 private:
     MppWindow& mppWindow;
 
-    void checkAssets();
     void createInstance();
     void setupDebugMessenger();
     void createSurface();
@@ -56,13 +59,13 @@ private:
     
     const std::vector<const char *> validationLayers = {"VK_LAYER_KHRONOS_validation"};
     const std::vector<const char*> deviceExtensions{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-    bool checkValidationLayerSupport();
-    void populateDebugMessengerCreateInfo( VkDebugUtilsMessengerCreateInfoEXT &createInfo);
+    bool checkValidationLayerSupport()const;
+    void populateDebugMessengerCreateInfo( VkDebugUtilsMessengerCreateInfoEXT &createInfo)const;
     VkDebugUtilsMessengerEXT debugMessenger;
-    bool isDeviceSuitable(VkPhysicalDevice device);
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-    bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+    bool isDeviceSuitable(VkPhysicalDevice device)const;
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device)const;
+    bool checkDeviceExtensionSupport(VkPhysicalDevice device)const;
+    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device)const;
 
 public:
 #ifdef NDEBUG
@@ -78,21 +81,21 @@ public:
     MppDevice(MppDevice&&) = delete;
     MppDevice& operator=(MppDevice&&) = delete;
 
-    VkInstance getInstance(){return instance;}
-    VkPhysicalDevice getPhysicalDevice(){return physicalDevice;}
-    VkDevice getLogicalDevice(){return device_;}
-    VmaAllocator getAllocator(){return allocator;}
-    VkCommandPool getRenderingCommandPool(){return renderingCommandPool;}
-    VkCommandPool getTextureLoadingCommandPool(){return textureLoadingCommandPool;}
-    SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevice); }
-    VkSurfaceKHR getSurface(){return surface;}
-    VkQueue getGraphicsQueue(){return graphicsQueue;}
-    VkQueue getPresentQueue(){return presentQueue;}
+    VkInstance getInstance()const{return instance;}
+    VkPhysicalDevice getPhysicalDevice()const{return physicalDevice;}
+    VkDevice getLogicalDevice()const{return device_;}
+    VmaAllocator getAllocator()const{return allocator;}
+    VkCommandPool getRenderingCommandPool()const{return renderingCommandPool;}
+    VkCommandPool getTextureLoadingCommandPool()const{return textureLoadingCommandPool;}
+    SwapChainSupportDetails getSwapChainSupport() const{ return querySwapChainSupport(physicalDevice); }
+    VkSurfaceKHR getSurface()const{return surface;}
+    VkQueue getGraphicsQueue()const{return graphicsQueue;}
+    VkQueue getPresentQueue()const{return presentQueue;}
 
     VkPhysicalDeviceProperties2 deviceProperties{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-    QueueFamilyIndices findPhysicalQueueFamilies() { return findQueueFamilies(physicalDevice); }
-    VkFormat findSupportedFormat( const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
-    VkSurfaceCapabilitiesKHR getDeviceSurfaceCapabilities();
+    QueueFamilyIndices findPhysicalQueueFamilies() const{ return findQueueFamilies(physicalDevice); }
+    VkFormat findSupportedFormat( const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features)const;
+    VkSurfaceCapabilitiesKHR getDeviceSurfaceCapabilities()const;
 };
     
 } // namespace mpp

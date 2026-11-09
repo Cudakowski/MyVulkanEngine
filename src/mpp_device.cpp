@@ -1,11 +1,6 @@
 #include "mpp_device.hpp"
 
 
-#include <iostream>
-#include <vector>
-#include <cassert>
-#include <filesystem>
-
 namespace mpp
 {
 
@@ -19,7 +14,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback( VkDebugUtilsMessageSeverity
 
 MppDevice::MppDevice(MppWindow& window): mppWindow{window}
 {
-    checkAssets();// TODO: Trzeba to przenieśc gdzies poza to
     createInstance();
     setupDebugMessenger();
     createSurface();
@@ -52,9 +46,7 @@ void MppDevice::setupDebugMessenger()
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo;
     populateDebugMessengerCreateInfo(createInfo);
-    if (vkCreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger) != VK_SUCCESS) {
-        throw std::runtime_error("failed to set up debug messenger!");
-    }
+    chk(vkCreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &debugMessenger), "failed to set up debug messenger!");
 }
 
 void MppDevice::createCommandPool()
@@ -69,10 +61,7 @@ void MppDevice::createCommandPool()
         .queueFamilyIndex = queueFamilyIndices.graphicsFamily
     };
 
-    if(vkCreateCommandPool(device_, &renderCommandPoolCI, nullptr, &renderingCommandPool) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create rendering command pool!");
-    }
+    chk(vkCreateCommandPool(device_, &renderCommandPoolCI, nullptr, &renderingCommandPool), "failed to create rendering command pool!");
 
     VkCommandPoolCreateInfo loadingCommandPoolCI{
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -80,19 +69,10 @@ void MppDevice::createCommandPool()
         .queueFamilyIndex = queueFamilyIndices.graphicsFamily
     };
 
-    if(vkCreateCommandPool(device_, &loadingCommandPoolCI, nullptr, &textureLoadingCommandPool) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create texture loading command pool!");
-    }
+    chk(vkCreateCommandPool(device_, &loadingCommandPoolCI, nullptr, &textureLoadingCommandPool), "failed to create texture loading command pool!");
 }
 
-void MppDevice::checkAssets()
-{
-    // Make sure asset folder is present from the current working directory
-    if (!std::filesystem::is_directory("assets")) {
-        throw std::runtime_error("Could not locate assets folder from current working directory\n");
-    }
-}
+
 
 void MppDevice::vmaSetup()
 {
@@ -113,10 +93,7 @@ void MppDevice::vmaSetup()
         .instance = instance
     };
     //tworzenie alokatora i sprawdzanie
-    if(vmaCreateAllocator(&allocatorCI, &allocator) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create allocator");
-    }
+    chk(vmaCreateAllocator(&allocatorCI, &allocator), "failed to create allocator");
 }
 
 void MppDevice::deviceSetup()
@@ -228,10 +205,7 @@ void MppDevice::deviceSetup()
     //tworzenie i sprawdzanie od razu wyniku
     //już mnie denerwuje że nazwy nie są do końca opisujące dobrze
     // przyjmuje: physical device, create info structa, alokator, zmienną do której zapisze wynik
-    if (vkCreateDevice(physicalDevice, &deviceCI, nullptr, &device_) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create logical device!");
-    }
+    chk(vkCreateDevice(physicalDevice, &deviceCI, nullptr, &device_), "failed to create logical device!");
 
     // proszenie logical device o kolejke komend
     // przyjmuje: logical device, rodzine kolejek, index kolejki, zmienną do której zapsize wskaźnik do kolejki
@@ -248,10 +222,8 @@ void MppDevice::detectingDevice()
     std::vector<VkPhysicalDevice> devices;
     uint32_t deviceCount{0};
     chk(vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr));
-    if (deviceCount == 0) 
-    {
-        throw std::runtime_error("failed to find GPUs with Vulkan support!");
-    }
+    chk(deviceCount != 0, "failed to find GPUs with Vulkan support!");
+    
     devices.resize(deviceCount);
     chk(vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data()));
 
@@ -280,9 +252,7 @@ void MppDevice::detectingDevice()
         }
     }
 
-    if (physicalDevice == VK_NULL_HANDLE) {
-        throw std::runtime_error("failed to find a suitable GPU!");
-    }
+    chk(physicalDevice != VK_NULL_HANDLE,"failed to find a suitable GPU!");
 
 
     // pobieranie właściwości urządzenia i printowanie nazwy
@@ -300,14 +270,10 @@ void MppDevice::detectingDevice()
 
 void MppDevice::createInstance()
 {
-    if(volkInitialize() != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to initialize volk");
-    }
+    chk(volkInitialize(), "failed to initialize volk");
+    
 
-    if (enableValidationLayers && !checkValidationLayerSupport()) {
-        throw std::runtime_error("validation layers requested, but not available!");
-    }
+    chk(!(enableValidationLayers && !checkValidationLayerSupport()), "validation layers requested, but not available!");
     //INSTANCJA ==================================================
 
 
@@ -329,9 +295,8 @@ void MppDevice::createInstance()
     uint32_t sdlExtensionCount{0};
     // to niżej to wskaźnik do tablicy c-style stringów
     char const* const* sdlExtensions{SDL_Vulkan_GetInstanceExtensions(&sdlExtensionCount)};
-    if (!sdlExtensions) {
-        throw std::runtime_error("failed to get SDL Vulkan instance extensions!");
-    }
+    chk(sdlExtensions, "failed to get SDL Vulkan instance extensions!");
+    
 
     std::vector<const char*> extensions(sdlExtensions, sdlExtensions + sdlExtensionCount);
 
@@ -362,15 +327,13 @@ void MppDevice::createInstance()
 
     // tworzenie instancji od razu ze sprawdzaniem
     // argumenty funkcji to: struct z infem, alokator, wskaźnik do instancji
-    if(vkCreateInstance(&instanceCI, nullptr, &instance) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create instance!");
-    }
+    chk(vkCreateInstance(&instanceCI, nullptr, &instance), "failed to create instance!");
+    
 
     volkLoadInstance(instance);//co
 }
 
-bool MppDevice::checkValidationLayerSupport() 
+bool MppDevice::checkValidationLayerSupport() const
 {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -396,20 +359,23 @@ bool MppDevice::checkValidationLayerSupport()
     return true;
 }
 
-void MppDevice::populateDebugMessengerCreateInfo( VkDebugUtilsMessengerCreateInfoEXT &createInfo) 
+void MppDevice::populateDebugMessengerCreateInfo( VkDebugUtilsMessengerCreateInfoEXT &createInfo) const
 {
-    createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | 
-                                VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT; //added verbose
-    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                            VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |//added general
-                            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    createInfo.pfnUserCallback = debugCallback;
-    createInfo.pUserData = nullptr;  // Optional
+    createInfo = {
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+        .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | 
+                           VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT, //added verbose
+        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | 
+                       VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                       VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |//added general
+                       VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+        .pfnUserCallback = debugCallback,
+        .pUserData = nullptr,  // Optional
+    };
 }
 
-bool MppDevice::isDeviceSuitable(VkPhysicalDevice device) 
+bool MppDevice::isDeviceSuitable(VkPhysicalDevice device) const
 {
     QueueFamilyIndices indices = findQueueFamilies(device);
 
@@ -427,7 +393,7 @@ bool MppDevice::isDeviceSuitable(VkPhysicalDevice device)
     return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
 }
 
-QueueFamilyIndices MppDevice::findQueueFamilies(VkPhysicalDevice device) 
+QueueFamilyIndices MppDevice::findQueueFamilies(VkPhysicalDevice device) const
 {
     QueueFamilyIndices indices;
 
@@ -489,7 +455,7 @@ QueueFamilyIndices MppDevice::findQueueFamilies(VkPhysicalDevice device)
     return indices;
 }
 
-bool MppDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) 
+bool MppDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) const
 {
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
@@ -506,14 +472,14 @@ bool MppDevice::checkDeviceExtensionSupport(VkPhysicalDevice device)
     return requiredExtensions.empty();
 }
 
-VkSurfaceCapabilitiesKHR MppDevice::getDeviceSurfaceCapabilities()
+VkSurfaceCapabilitiesKHR MppDevice::getDeviceSurfaceCapabilities()const
 {
     VkSurfaceCapabilitiesKHR capabilities{};
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities);
     return capabilities;
 }
 
-SwapChainSupportDetails MppDevice::querySwapChainSupport(VkPhysicalDevice device) 
+SwapChainSupportDetails MppDevice::querySwapChainSupport(VkPhysicalDevice device) const
 {
     SwapChainSupportDetails details;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
@@ -536,7 +502,7 @@ SwapChainSupportDetails MppDevice::querySwapChainSupport(VkPhysicalDevice device
     return details;
 }
 
-VkFormat MppDevice::findSupportedFormat( const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features) 
+VkFormat MppDevice::findSupportedFormat( const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
 {
     for (VkFormat format : candidates) 
     {

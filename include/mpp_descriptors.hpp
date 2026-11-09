@@ -2,6 +2,7 @@
 
 #include "mpp_device.hpp"
 
+// std
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -69,7 +70,7 @@ public:
     // variableCount: 0 oznacza zwykły set; >0 alokuje set z flagą variable descriptor count
     bool allocateDescriptor(const VkDescriptorSetLayout descriptorSetLayout, VkDescriptorSet &descriptor, uint32_t variableDescCount = 0) const;
     void freeDescriptors(std::vector<VkDescriptorSet> &descriptors) const;
-    void resetPool();
+    void resetPool()const;
 
 private:
     MppDevice &mppDevice;

@@ -43,10 +43,7 @@ void MppRenderer::createCommandBuffers()
         .commandPool = mppDevice.getRenderingCommandPool(),
         .commandBufferCount = static_cast<uint32_t>(commandBuffers.size())
     };
-    if(vkAllocateCommandBuffers(mppDevice.getLogicalDevice(), &cbAllocCI, commandBuffers.data())!= VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to allocate command buffers!");
-    }
+    chk(vkAllocateCommandBuffers(mppDevice.getLogicalDevice(), &cbAllocCI, commandBuffers.data()), "failed to allocate command buffers!");
 }
 
 void MppRenderer::freeCommandBuffers()
@@ -62,23 +59,7 @@ void MppRenderer::recreateSwapChain()
         return;
     }
     
-    // while (extent.width == 0 || extent.height == 0) {
-    //     SDL_Event event;
-    //     if (SDL_WaitEvent(&event)) {
-    //         if (event.type == SDL_EVENT_QUIT) {
-    //             //return; // lub ustaw flagę wyjścia z aplikacji
-    //         }
-    //         SDL_PushEvent(&event); // Zwróć zdarzenie do kolejki, aby pętla główna mogła je normalnie obsłużyć
-    //     }
-    //     extent = mppWindow.getExtent();
-    // }
 
-    // while (extent.width == 0 || extent.height == 0) 
-    // {
-    //     extent = mppWindow.getExtent();
-    //     SDL_Event event;
-    //     SDL_WaitEvent(&event);//TODO: to jest nie dobrze, zatrzymuje przyjmowanie eventów(nie da sie zamknąć okna poprzez x)
-    // }
     vkDeviceWaitIdle(mppDevice.getLogicalDevice());
 
     if (mppSwapChain == nullptr) 
@@ -90,10 +71,7 @@ void MppRenderer::recreateSwapChain()
         std::shared_ptr<MppSwapChain> oldSwapChain = std::move(mppSwapChain);
         mppSwapChain = std::make_unique<MppSwapChain>(mppDevice, extent, oldSwapChain);
 
-        if(!oldSwapChain->compareSwapFormats(*mppSwapChain.get())) 
-        {
-            throw std::runtime_error("Swap chain image(or depth) format has changed!");
-        }//TODO: Naprawić przedwczesne destroy old swapchain
+        chk(oldSwapChain->compareSwapFormats(*mppSwapChain.get()), "Swap chain image(or depth) format has changed!");//TODO: Naprawić przedwczesne destroy old swapchain
     }
 }
 
@@ -159,24 +137,16 @@ VkCommandBuffer MppRenderer::beginFrame()
     
     //resetowanie buffera
     auto cb = getCurrentCommandBuffer();
-    if (vkResetCommandBuffer(cb,0) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to reset command buffer");
-    }
+    chk(vkResetCommandBuffer(cb,0), "failed to reset command buffer");
 
     //rozpoczęcie nagrywania
     VkCommandBufferBeginInfo cbBI{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
     };
-    if (vkBeginCommandBuffer(cb, &cbBI) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to begin recording command buffer!");
-    }
+    chk(vkBeginCommandBuffer(cb, &cbBI), "failed to begin recording command buffer!");
 
     return cb;
-
-    
 }
 
 void MppRenderer::beginSwapChainRenderPass(VkCommandBuffer cb)
@@ -330,10 +300,7 @@ void MppRenderer::endFrame(VkCommandBuffer cb)
     // We don't need a barrier for the depth attachment, as we don't use that outside of this render pass.
 
     //end recording :DDDDDDDDDDDDDDDDDDDDDDDDDDDDD
-    if (vkEndCommandBuffer(cb) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to record command buffer!");
-    }
+    chk(vkEndCommandBuffer(cb), "failed to record command buffer!");
     // to zmienie state buffera na executable
 
 
@@ -365,7 +332,7 @@ void MppRenderer::updateShaderData(ShaderData& shaderData)
     memcpy(getCurrentShaderDataBuffer().allocationInfo.pMappedData, &shaderData, sizeof(ShaderData));
 }
 
-bool MppRenderer::hasStencilComponent(VkFormat format) 
+bool MppRenderer::hasStencilComponent(VkFormat format) const
 {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || 
            format == VK_FORMAT_D24_UNORM_S8_UINT;
@@ -401,10 +368,9 @@ void MppRenderer::createShaderDataBuffers()
             VMA_ALLOCATION_CREATE_MAPPED_BIT,
             .usage = VMA_MEMORY_USAGE_AUTO
         };
-        if(vmaCreateBuffer(mppDevice.getAllocator(), &uBufferCI, &uBufferAllocCI, &shaderDataBuffers[i].buffer, &shaderDataBuffers[i].allocation, &shaderDataBuffers[i].allocationInfo) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to allocate shader data buffer via VMA");
-        }
+        chk(vmaCreateBuffer(mppDevice.getAllocator(), &uBufferCI, &uBufferAllocCI, &shaderDataBuffers[i].buffer, &shaderDataBuffers[i].allocation, &shaderDataBuffers[i].allocationInfo), 
+            "Failed to allocate shader data buffer via VMA");
+        
         VkBufferDeviceAddressInfo uBufferBdaInfo{
             .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
             .buffer = shaderDataBuffers[i].buffer
@@ -412,10 +378,7 @@ void MppRenderer::createShaderDataBuffers()
         /*To be able to access the buffer in our shader, we then get its device address and store it for later access.*/
         shaderDataBuffers[i].deviceAddress = vkGetBufferDeviceAddress(mppDevice.getLogicalDevice(), &uBufferBdaInfo);
         
-        if (shaderDataBuffers[i].deviceAddress == 0)
-        {
-            throw std::runtime_error("Failed to get Buffer Device Address! Ensure bufferDeviceAddress feature is enabled on VkDevice.");
-        }
+        chk(shaderDataBuffers[i].deviceAddress != 0, "Failed to get Buffer Device Address! Ensure bufferDeviceAddress feature is enabled on VkDevice.");
     }
 }
 

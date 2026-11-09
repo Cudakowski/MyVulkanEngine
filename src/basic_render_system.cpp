@@ -13,7 +13,8 @@ BasicRenderSystem::~BasicRenderSystem()
     vkDestroyPipelineLayout(mppDevice.getLogicalDevice(), pipelineLayout, nullptr);
 }
 
-void BasicRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
+void BasicRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout)
+{
     // GRAPHISC PIPELINE =========================================
 
     // pipeline stages objects
@@ -43,10 +44,7 @@ void BasicRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayo
         .pushConstantRangeCount = 1,
         .pPushConstantRanges = &pushConstantRange
     };
-    if (vkCreatePipelineLayout(mppDevice.getLogicalDevice(), &pipelineLayoutCI, nullptr, &pipelineLayout) != VK_SUCCESS) 
-    {
-        throw std::runtime_error("failed to create pipeline layout!");
-    }
+    chk(vkCreatePipelineLayout(mppDevice.getLogicalDevice(), &pipelineLayoutCI, nullptr, &pipelineLayout),"failed to create pipeline layout!");
 }
 
 void BasicRenderSystem::createPipeline(VkFormat swapChainImageFormat, VkFormat swapChainDepthFormat)
@@ -65,7 +63,7 @@ void BasicRenderSystem::createPipeline(VkFormat swapChainImageFormat, VkFormat s
     );
 }
 
-void BasicRenderSystem::render(FrameInfo& frameInfo)
+void BasicRenderSystem::render(FrameInfo& frameInfo)const
 {
     mppPipeline->bind(frameInfo.commandBuffer);
 

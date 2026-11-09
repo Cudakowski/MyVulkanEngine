@@ -58,11 +58,7 @@ MppDescriptorSetLayout::MppDescriptorSetLayout(MppDevice &device, std::unordered
         if (flags != 0) hasNonZeroFlags = true;
     }
 
-    // VkDescriptorBindingFlags descVariableFlag{ 
-    //     VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT|
-    //     VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
-    // }; // TODO: dodać VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT kiedy będzie się robić ładowanie tekstur w tracie działania programu
-    
+
     VkDescriptorSetLayoutBindingFlagsCreateInfo descBindingFlagsInfo{
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
         .bindingCount = static_cast<uint32_t>(setLayoutBindingFlags.size()),
@@ -76,10 +72,7 @@ MppDescriptorSetLayout::MppDescriptorSetLayout(MppDevice &device, std::unordered
         .pBindings = setLayoutBindings.data(),
     };
 
-    if (vkCreateDescriptorSetLayout(mppDevice.getLogicalDevice(), &descriptorSetLayoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) 
-    {
-        throw std::runtime_error("failed to create descriptor set layout");
-    }
+    chk(vkCreateDescriptorSetLayout(mppDevice.getLogicalDevice(), &descriptorSetLayoutInfo, nullptr, &descriptorSetLayout),"failed to create descriptor set layout");
 }
 
 MppDescriptorSetLayout::~MppDescriptorSetLayout()
@@ -125,10 +118,7 @@ MppDescriptorPool::MppDescriptorPool(MppDevice &device, uint32_t maxSets, VkDesc
         .pPoolSizes = poolSizes.data(),
     };
 
-    if (vkCreateDescriptorPool(mppDevice.getLogicalDevice(), &descriptorPoolInfo, nullptr, &descriptorPool) != VK_SUCCESS) 
-    {
-        throw std::runtime_error("failed to create descriptor pool");
-    }
+    chk(vkCreateDescriptorPool(mppDevice.getLogicalDevice(), &descriptorPoolInfo, nullptr, &descriptorPool), "failed to create descriptor pool");
 }
 
 MppDescriptorPool::~MppDescriptorPool()
@@ -167,7 +157,7 @@ void MppDescriptorPool::freeDescriptors(std::vector<VkDescriptorSet> &descriptor
     vkFreeDescriptorSets(mppDevice.getLogicalDevice(), descriptorPool, static_cast<uint32_t>(descriptors.size()), descriptors.data());
 }
 
-void MppDescriptorPool::resetPool()
+void MppDescriptorPool::resetPool()const
 {
     vkResetDescriptorPool(mppDevice.getLogicalDevice(), descriptorPool, 0);
 }

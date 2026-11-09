@@ -1,10 +1,22 @@
-- [ ] Delete/improove mpp_checks
-- [ ] mpp_buffer
+- [x] przenieść te takie dwie rzeczy do Vertex
 - [x] mpp_descriptors
 - [x] Delete mpploader
-- [ ] Add profesional comments
-- [ ] Uprościć, aby tam gdzie się na nie podawać referencji do całych głównych obiektów tylko potrzebne rzeczy
-- [ ] Ustawić const funkcje które sie da
-- [ ] przenieść te takie dwie rzeczy do Vertex
-- [ ] ogarnąć includy
+- [x] Uprościć, aby tam gdzie się na nie podawać referencji do całych głównych obiektów tylko potrzebne rzeczy
+- [x] ogarnąć includy
+- [x] Delete/improove mpp_checks
+- [x] Ustawić const funkcje które sie da
+- [ ] mpp_buffer
+- [ ] Dodać dear ImGui
 - [ ] dorobić MppTextureManager/ResourceManager
+- [ ] Add profesional comments
+- [ ] Podzielić modułu shaderów w pipeline'ie kiedy będzie to potrzebne
+- [ ] enableAlphaBlending w MppPipeline
+- [ ] ładowanie tekstur w tracie działania programu kiedyś
+- [ ] Might want to create a "DescriptorPoolManager" class that handles this(in mpp_descriptors) case, and builds a new pool whenever an old pool fills up. But this is beyond our current scope
+- [ ] ogarnąć system rysowania instancji siatek obiektów kiedy siatki są takie same
+- [ ] przenieść rzeczy z slang'iem do jakiegoś systemu zarządzania zasobami
+- [ ] "// kumpilowanie slanga do SPIR-V w runtimie :D (TODO:: tylko na czas developement'u i do edytora(ryzyko bezpieczeństwa))"
+- [ ] Naprawić przedwczesne destroy old swapchain
+- [ ] "// VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT | //zakomentowane bo to zezwolenie dla vma aby alokowało pamięć NIE host-visible(wtedy są potrzebne descriptory) TODO: obsłóżyć to jak sie chce wsteczną kompatybilność"
+- [ ] obsługiwać błędy wczytywania ktx w tym jednym miejscu
+- [ ] zrobić żeby tworzone były te (fence, buffer, command buffer) obiekty dla wszystkich tekstur raz i niszczone raz (a przynajmniej mniej razy). Obecnie jest tak że są one osobno tworzone i nicszczone dla każdego wczytania tekstury

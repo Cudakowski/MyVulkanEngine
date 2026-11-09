@@ -3,7 +3,9 @@
 #include "mpp_device.hpp"
 #include "mpp_window.hpp"
 #include "mpp_swap_chain.hpp"
+#include "mpp_checks.hpp"
 
+// libs
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
 #define GLM_FORCE_RADIANS
@@ -12,8 +14,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "mpp_checks.hpp"
 
+// std
 #include <memory>
 
 namespace mpp
@@ -31,7 +33,6 @@ private:
 
     uint32_t currentImageIndex{0};
     uint32_t frameIndex{0};
-    bool updateSwapchain{false};//to delete
     bool isFrameStarted{false};
 
     void createCommandBuffers();
@@ -52,8 +53,8 @@ private:
     std::array<VkFence, MppSwapChain::MAX_FRAMES_IN_FLIGHT> fences;
     std::array<VkSemaphore, MppSwapChain::MAX_FRAMES_IN_FLIGHT> imageAcquiredSemaphores;
 
-    ShaderDataBuffer& getCurrentShaderDataBuffer(){return shaderDataBuffers[frameIndex];}// nie wiem czy potrzebne
-    bool hasStencilComponent(VkFormat format);
+    ShaderDataBuffer& getCurrentShaderDataBuffer(){return shaderDataBuffers[frameIndex];}
+    bool hasStencilComponent(VkFormat format)const;
     
 public:
 
@@ -63,10 +64,9 @@ public:
     MppRenderer(const MppRenderer&) = delete;
     MppRenderer& operator=(const MppRenderer&) = delete;
 
-    const VkFormat& getSwapChainImageFormat(){return mppSwapChain->getImageFormat();}//to sie używa przy tworzeniu pipeline'u
-    VkFormat getSwapChainDepthFormat(){return mppSwapChain->getDepthFormat();}//to sie używa przy tworzeniu pipeline'u
+    const VkFormat& getSwapChainImageFormat()const{return mppSwapChain->getImageFormat();}//to sie używa przy tworzeniu pipeline'u
+    VkFormat getSwapChainDepthFormat()const{return mppSwapChain->getDepthFormat();}//to sie używa przy tworzeniu pipeline'u
     VkDeviceAddress& getCurrentShaderDataBufferDeviceAddress(){return getCurrentShaderDataBuffer().deviceAddress;}//to sie używa w systemach renderowania
-    //int getFrameIndex(){return ;}
 
 
     VkCommandBuffer beginFrame();
@@ -76,11 +76,8 @@ public:
 
     
     bool isFrameInProgress() const { return isFrameStarted; }
-    //float getAspectRatio() const {return mppSwapChain->extentAspectRatio();}//a to może być nawet kiedyś potrzebne xd
 
     void updateShaderData(ShaderData& shaderData);//a co to xd
-    //void conditionalRecreateSwapChain();//to delete
-    void requestRecreateSwapChain(){updateSwapchain = true;};//to delete
 
     VkCommandBuffer getCurrentCommandBuffer() const {
         assert(isFrameStarted && "Cannot get buffer when frame not in progress");

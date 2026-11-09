@@ -1,6 +1,6 @@
 #include "mpp_pipeline.hpp"
 
-#include "slang/slang.h"
+#include "slang/slang.h"//TODO: to do jakiegoś systemu zarządzania zasobami
 #include "slang/slang-com-ptr.h"
 #include <filesystem>
 #include <fstream>
@@ -84,7 +84,7 @@ void loadShaders(std::vector<uint32_t> &spirvData)//TODO: Lepiej zaprojektować
     
 }
 
-void MppPipeline::createShaderModule(const std::vector<uint32_t>& data, VkShaderModule& shaderModule)
+void MppPipeline::createShaderModule(const std::vector<uint32_t>& data, VkShaderModule& shaderModule)const
 {
     // tworzenie modułu shadera (kontener na skompilowany SPRI-V)
     VkShaderModuleCreateInfo shaderModuleCI{
@@ -93,10 +93,7 @@ void MppPipeline::createShaderModule(const std::vector<uint32_t>& data, VkShader
         .pCode = data.data()
     };
 
-    if (vkCreateShaderModule(mppDevice.getLogicalDevice(), &shaderModuleCI, nullptr, &shaderModule) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create shader module");
-    }
+    chk(vkCreateShaderModule(mppDevice.getLogicalDevice(), &shaderModuleCI, nullptr, &shaderModule), "failed to create shader module");
     /* To do nowszej wersji vulkana
     The VK_KHR_maintenance5 extension, which became core with 
     Vulkan 1.4, deprecated shader modules. It allows direct 
@@ -259,7 +256,7 @@ MppPipeline::MppPipeline(MppDevice& device,const PipelineConfigInfo& configInfo,
 
 }
 
-void MppPipeline::bind(VkCommandBuffer commandBuffer)
+void MppPipeline::bind(VkCommandBuffer commandBuffer)const
 {
     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 }
@@ -349,25 +346,10 @@ void MppPipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo)
         .dynamicStateCount = static_cast<uint32_t>(configInfo.dynamicStateEnables.size()),
         .pDynamicStates = configInfo.dynamicStateEnables.data(),
     };
-
-
-    //configInfo.bindingDescriptions = MppModel::Vertex::getBindingDescriptions(); // TODO: nie wiem, chyba doprze jest wprowadzić te funkcje
-    //configInfo.attributeDescriptions = MppModel::Vertex::getAttributeDescriptions();
     
     // layout of the vertex data
-    configInfo.bindingDescriptions = {
-        {
-            .binding = 0,
-            .stride = sizeof(MppModel::Vertex),
-            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-        }
-    };
-
-    configInfo.attributeDescriptions = {
-        {.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT },
-        {.location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset  = offsetof(MppModel::Vertex, normal) },
-        {.location = 2, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset  = offsetof(MppModel::Vertex, uv) },
-    };
+    configInfo.bindingDescriptions = MppModel::Vertex::getBindingDescriptions();
+    configInfo.attributeDescriptions = MppModel::Vertex::getAttributeDescriptions();
 
 }
 

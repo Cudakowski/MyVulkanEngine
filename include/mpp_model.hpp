@@ -1,15 +1,16 @@
 #pragma once
 
 #include "mpp_device.hpp"
-
-
 #include "mpp_checks.hpp"
+
+// libs
 
 #include <tiny_obj_loader.h>
 #include <glm/glm.hpp>
 //#include <glm/gtc/matrix_transform.hpp>
 //#include <glm/gtc/quaternion.hpp>
 
+// std
 #include <memory>
 
 namespace mpp
@@ -57,8 +58,8 @@ public:
 
     static std::unique_ptr<MppModel> createModelFromFile(MppDevice& device, const std::string &filepath);
 
-    void bind(VkCommandBuffer commandBuffer);
-    void draw(VkCommandBuffer commandBuffer);
+    void bind(VkCommandBuffer commandBuffer)const;
+    void draw(VkCommandBuffer commandBuffer)const;
 };
 
 

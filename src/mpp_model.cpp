@@ -161,7 +161,7 @@ MppModel::~MppModel()
     vmaDestroyBuffer(mppDevice.getAllocator(), vBuffer, vBufferAllocation);
 }
 
-void MppModel::bind(VkCommandBuffer commandBuffer)
+void MppModel::bind(VkCommandBuffer commandBuffer)const
 {
     //3D object data
     VkDeviceSize vOffset{ 0 };
@@ -169,10 +169,34 @@ void MppModel::bind(VkCommandBuffer commandBuffer)
     vkCmdBindIndexBuffer(commandBuffer, vBuffer, indexDataOffset, VK_INDEX_TYPE_UINT16);
 }
 
-void MppModel::draw(VkCommandBuffer commandBuffer)
+void MppModel::draw(VkCommandBuffer commandBuffer)const
 {
     //DRAW :DDDDD
     vkCmdDrawIndexed(commandBuffer, indexCount, 1, 0, 0, 0);//TODO: INSTANCJE OGARNĄĆ
+}
+
+std::vector<VkVertexInputBindingDescription> MppModel::Vertex::getBindingDescriptions()
+{
+    std::vector<VkVertexInputBindingDescription> bindingDescriptions{
+        {
+            .binding = 0,
+            .stride = sizeof(Vertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        }
+    };
+    return bindingDescriptions;
+
+}
+
+std::vector<VkVertexInputAttributeDescription> MppModel::Vertex::getAttributeDescriptions()
+{
+    std::vector<VkVertexInputAttributeDescription> attributeDescriptions{
+        {.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT },
+        {.location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset  = offsetof(Vertex, normal) },
+        {.location = 2, .binding = 0, .format = VK_FORMAT_R32G32_SFLOAT, .offset  = offsetof(Vertex, uv) },
+    };
+    
+    return attributeDescriptions;
 }
 
 } // namespace mpp

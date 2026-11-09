@@ -1,8 +1,8 @@
 #pragma once
 
 #include "mpp_model.hpp"
-#include "mpp_texture.hpp"
 
+// std
 #include <unordered_map>
 #include <memory>
 
@@ -14,8 +14,8 @@ struct TransformComponent{
     glm::vec3 scale{1.f,1.f, 1.f};
     glm::vec3 rotation{};
 
-    glm::mat4 mat4();
-    glm::mat3 normalMatrix();
+    glm::mat4 mat4()const;
+    glm::mat3 normalMatrix()const;
 };
 
 
@@ -28,7 +28,7 @@ public:
     using Map = std::unordered_map<id_t, MppGameObject>;
 
     std::shared_ptr<MppModel> model{};
-    uint32_t textureID{};
+    uint32_t textureID{};//to na razie nic nie robi, docelowo obiekt powinien mieć materiał/tablice materiałów i to te materiały powinny mieć tekstury
 
     static MppGameObject createGameObject()
     {
@@ -41,7 +41,7 @@ public:
     MppGameObject(MppGameObject &&) =default;
     MppGameObject &operator=(MppGameObject &&) = default;
 
-    id_t getId(){return id;}
+    id_t getId()const{return id;}
 
     TransformComponent transform{};
 private:

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "mpp_checks.hpp"
 
+// libs
 #include <vulkan/vulkan.h>
 #include <volk/volk.h>
 #include <SDL3/SDL.h>
@@ -9,13 +11,15 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 
+// std
 #include <cassert>
 #include <string>
+#include <iostream>
 
 namespace mpp
 {
 
-// TODO: podzielić MppWindow na MppWindow i MppSurface
+
 class MppWindow 
 {
 private:
@@ -36,9 +40,7 @@ public:
     MppWindow& operator=(const MppWindow&) = delete;
 
 
-    
-    //VkSurfaceCapabilitiesKHR getSurfaceCaps(){return surfaceCaps;}
-    glm::ivec2 getWindowSize(){return windowSize;}
+    glm::ivec2 getWindowSize()const{return windowSize;}
 
     /**
      * @brief Get the Window Extent
@@ -48,12 +50,12 @@ public:
      * @return VkExtent2D 
      */
     VkExtent2D getExtent();
-    bool wasWindowResized(){return framebufferResized;}
+    bool wasWindowResized()const{return framebufferResized;}
     void resetWindowResizedFlag(){ framebufferResized=false;}
-    void createWindowSurface(VkInstance instance, VkSurfaceKHR& surface );
+    void createWindowSurface(VkInstance instance, VkSurfaceKHR& surface )const;
     void setWindowResized(int width, int height);
     
-    //void updateWindowSize();
+
 };
 
 

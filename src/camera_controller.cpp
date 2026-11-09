@@ -4,7 +4,8 @@
 namespace mpp
 {
     
-void CameraController::update(float dt, MppGameObject& viewerObject) {
+void CameraController::update(float dt, MppGameObject& viewerObject) const
+{
     const bool* keyboardState = SDL_GetKeyboardState(nullptr);
 
     glm::vec3 rotate{0.0f};

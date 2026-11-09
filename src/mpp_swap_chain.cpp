@@ -50,7 +50,7 @@ MppSwapChain::~MppSwapChain()
 }
 
 
-VkResult MppSwapChain::acquireNextImage(uint32_t& imageIndex, VkFence fence, VkSemaphore imageAcquiredSemaphore)
+VkResult MppSwapChain::acquireNextImage(uint32_t& imageIndex, VkFence fence, VkSemaphore imageAcquiredSemaphore)const
 {
     // Wait on fence ********************************
     //czekanie na to aż gpu skończy wykonywać poprzedni commandbuffer
@@ -66,7 +66,7 @@ VkResult MppSwapChain::acquireNextImage(uint32_t& imageIndex, VkFence fence, VkS
     return result;
 }
 
-VkResult MppSwapChain::submitCommandBuffer(VkCommandBuffer cb,uint32_t& imageIndex, VkFence fence, VkSemaphore imageAcquiredSemaphore)
+VkResult MppSwapChain::submitCommandBuffer(VkCommandBuffer cb,uint32_t& imageIndex, VkFence fence, VkSemaphore imageAcquiredSemaphore)const
 {
     // Submit command buffer ********************************
 
@@ -205,10 +205,7 @@ void MppSwapChain::createDepthAttachment()
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
     {
-        if(vmaCreateImage(mppDevice.getAllocator(), &depthImageCI, &allocCI, &depthImages[i], &depthImageAllocations[i], nullptr) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to allocate and create Depth Image via VMA!");
-        }
+        chk(vmaCreateImage(mppDevice.getAllocator(), &depthImageCI, &allocCI, &depthImages[i], &depthImageAllocations[i], nullptr), "Failed to allocate and create Depth Image via VMA!");
 
         // info view tego image'a
         VkImageViewCreateInfo depthViewCI{
@@ -225,10 +222,7 @@ void MppSwapChain::createDepthAttachment()
             }
         };
 
-        if(vkCreateImageView(mppDevice.getLogicalDevice(), &depthViewCI, nullptr, &depthImageViews[i]) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to create Depth Image View");
-        }
+        chk(vkCreateImageView(mppDevice.getLogicalDevice(), &depthViewCI, nullptr, &depthImageViews[i]), "Failed to create Depth Image View");
     }
 
     /*
@@ -321,10 +315,7 @@ void MppSwapChain::createSwapChain()
         .oldSwapchain = oldSwapChain == nullptr ? VK_NULL_HANDLE : oldSwapChain->swapchain
     };
 
-    if(vkCreateSwapchainKHR(mppDevice.getLogicalDevice(), &swapchainCI, nullptr, &swapchain) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create swap chain");
-    }
+    chk(vkCreateSwapchainKHR(mppDevice.getLogicalDevice(), &swapchainCI, nullptr, &swapchain), "failed to create swap chain");
     
     /*
     The swapchain setup shown here is a bare minimum. In a 
@@ -376,14 +367,11 @@ void MppSwapChain::createImageViews()
                 .layerCount = 1,
             },
         };  
-        if (vkCreateImageView(mppDevice.getLogicalDevice(), &viewCI, nullptr, &swapchainImageViews[i]) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create texture image view!");
-        }
+        chk(vkCreateImageView(mppDevice.getLogicalDevice(), &viewCI, nullptr, &swapchainImageViews[i]), "failed to create texture image view!");
     }
 }
 
-VkSurfaceFormatKHR MppSwapChain::chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR> &availableFormats)
+VkSurfaceFormatKHR MppSwapChain::chooseSwapSurfaceFormat( const std::vector<VkSurfaceFormatKHR> &availableFormats)const
 {
     for (const auto &availableFormat : availableFormats) 
     {
@@ -396,7 +384,7 @@ VkSurfaceFormatKHR MppSwapChain::chooseSwapSurfaceFormat( const std::vector<VkSu
     return availableFormats[0];
 }
 
-VkPresentModeKHR MppSwapChain::chooseSwapPresentMode( const std::vector<VkPresentModeKHR> &availablePresentModes)
+VkPresentModeKHR MppSwapChain::chooseSwapPresentMode( const std::vector<VkPresentModeKHR> &availablePresentModes)const
 {
     // for (const auto &availablePresentMode : availablePresentModes) {
     //   if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
@@ -416,7 +404,7 @@ VkPresentModeKHR MppSwapChain::chooseSwapPresentMode( const std::vector<VkPresen
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D MppSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities)
+VkExtent2D MppSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities)const
 {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
     {

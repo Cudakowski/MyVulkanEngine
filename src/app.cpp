@@ -42,6 +42,14 @@ void App::loadGameObjects()
     gameObjects.emplace(object3.getId(), std::move(object3));
 }
 
+void App::checkAssets() const
+{
+    // Make sure asset folder is present from the current working directory
+    if (!std::filesystem::is_directory("assets")) {
+        throw std::runtime_error("Could not locate assets folder from current working directory\n");
+    }
+}
+
 
 App::App(/* args */)
 {

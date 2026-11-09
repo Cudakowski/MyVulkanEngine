@@ -1,6 +1,6 @@
 #include "mpp_window.hpp"
 
-#include <iostream>
+
 
 namespace mpp
 {
@@ -25,63 +25,41 @@ MppWindow::~MppWindow()
 
 MppWindow::MppWindow( std::string name, int width, int height)
 {
-    if(!SDL_Init(SDL_INIT_VIDEO))
-    {
-        throw std::runtime_error("failed to initialize SDL");
-    }
-    if(!SDL_Vulkan_LoadLibrary(NULL))
-    {
-        throw std::runtime_error("failed to load vulkan library");
-    }
+    chk(SDL_Init(SDL_INIT_VIDEO), "failed to initialize SDL");
+    chk(SDL_Vulkan_LoadLibrary(NULL), "failed to load vulkan library");
 
     // WINDOW AND SURFACE ==============================
 
     // tworzenie okna za pomocą SDL'a
     window = SDL_CreateWindow(name.c_str(), width, height, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
     //assert(window);// takie tam sprawdzanie czy działa
-    if(!window)
-    {
-        throw std::runtime_error("failed to create window");
-    }
+    chk(window, "failed to create window");
 
     // requestowanie suface'a dla tego okna i sprawdzanie
     // przyjmuje wksźnik do okna, instancje, alokator, i zmienną z 
     // powieżchnią do której zapisuje wynik
 
     // pobieranie wielkości okna(nie mam pjęcia po jakiego kija pobieramy wielkośc okna kiedy jest to wpisanie zaraz wyżej)
-    if(!SDL_GetWindowSizeInPixels(window, &windowSize.x, &windowSize.y))
-    {
-        throw std::runtime_error("failed to get window size1");
-    }
+    chk(SDL_GetWindowSizeInPixels(window, &windowSize.x, &windowSize.y), "failed to get window size1");
 
     // // pobieranie właściwości powieżchni
     // if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mppDevice.getPhysicalDevice() , surface, &surfaceCaps) != VK_SUCCESS)
     // {
     //     throw std::runtime_error("failed to get surface capabilities1");
     // }
-
-    
-
 } 
 
 
 
 
-void MppWindow::createWindowSurface(VkInstance instance, VkSurfaceKHR& surface )
+void MppWindow::createWindowSurface(VkInstance instance, VkSurfaceKHR& surface )const
 {
-    if (!SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface))
-    {
-        throw std::runtime_error(std::string("Failed to create window surface: ") + SDL_GetError());
-    }
+    chk(SDL_Vulkan_CreateSurface(window, instance, nullptr, &surface), std::string("Failed to create window surface: ") + SDL_GetError());
 }
 
 VkExtent2D MppWindow::getExtent()
 {
-    if(!SDL_GetWindowSizeInPixels(window, &windowSize.x, &windowSize.y))
-    {
-        throw std::runtime_error("failed to get window size2");
-    }
-    //std::cout<<windowSize.x <<' '<<windowSize.y<<" getExtentSize\n";
+    chk(SDL_GetWindowSizeInPixels(window, &windowSize.x, &windowSize.y), "failed to get window size2");
     return { static_cast<uint32_t>(windowSize.x), static_cast<uint32_t>(windowSize.y) };
 }
 
