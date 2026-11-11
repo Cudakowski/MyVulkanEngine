@@ -71,6 +71,7 @@ public:
     bool allocateDescriptor(const VkDescriptorSetLayout descriptorSetLayout, VkDescriptorSet &descriptor, uint32_t variableDescCount = 0) const;
     void freeDescriptors(std::vector<VkDescriptorSet> &descriptors) const;
     void resetPool()const;
+    VkDescriptorPool getDescriptorPool()const {return descriptorPool;}
 
 private:
     MppDevice &mppDevice;

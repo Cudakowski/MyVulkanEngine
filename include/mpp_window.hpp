@@ -54,7 +54,7 @@ public:
     void resetWindowResizedFlag(){ framebufferResized=false;}
     void createWindowSurface(VkInstance instance, VkSurfaceKHR& surface )const;
     void setWindowResized(int width, int height);
-    
+    SDL_Window* getSDLWindow()const{return window;}
 
 };
 

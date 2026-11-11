@@ -55,7 +55,9 @@ elseif (LINUX)
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE 
-    ${SDL_LIBRARY} 
+    SDL3::SDL3
+    imgui
+    Vulkan::Vulkan
     ktx
     tinyobj
     ${Slang_LIBRARY}

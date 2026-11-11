@@ -58,7 +58,7 @@ App::App(/* args */)
 
 App::~App()
 {
-
+    cleanupImGui();
 }
 
 void App::run()
@@ -84,7 +84,7 @@ void App::run()
         textureLayout->getDescriptorSetLayout()
     );
 
-
+    initImGui();
 
     ShaderData shaderData{};
 
@@ -109,6 +109,8 @@ void App::run()
         // Poll events ********************************
         for (SDL_Event event; SDL_PollEvent(&event);)
         {
+            ImGui_ImplSDL3_ProcessEvent(&event);
+
             switch (event.type)
             {
                 //exit loop if aplication is about to close
@@ -126,10 +128,35 @@ void App::run()
                 }
             
                 default:
-                    sceneInputHandler.handleEvent(event, elapsedTime, gameObjects, shaderData.selected);
+                    //blokowanie zdarzeń kiedy jest interakcja z imgui
+                    ImGuiIO& io = ImGui::GetIO();
+                    bool mouseHandled = io.WantCaptureMouse && 
+                        (event.type >= SDL_EVENT_MOUSE_MOTION && event.type <= SDL_EVENT_MOUSE_WHEEL);
+                    bool keyboardHandled = io.WantCaptureKeyboard && 
+                        (event.type >= SDL_EVENT_KEY_DOWN && event.type <= SDL_EVENT_KEY_UP);
+
+                    if (!mouseHandled && !keyboardHandled) {
+                        sceneInputHandler.handleEvent(event, elapsedTime, gameObjects, shaderData.selected);
+                    }
                     break;
             }
         }
+
+        // 1. Start nowej klatki ImGui
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplSDL3_NewFrame();
+        ImGui::NewFrame();
+
+        // 2. Przykładowe okienko diagnostyczne
+        ImGui::Begin("Engine Diagnostics");
+        ImGui::Text("FPS: %.1f (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+        ImGui::Text("Rendered objects: %zu", gameObjects.size());
+        ImGui::Separator();
+        ImGui::DragFloat3("Camera Pos", &viewerObject.transform.translation.x, 0.1f);
+        ImGui::End();
+
+        // 3. Zakończenie definicji UI i wygenerowanie geometrii wierzchołków
+        ImGui::Render();
 
         cameraController.update(elapsedTime, viewerObject);
         camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
@@ -151,12 +178,9 @@ void App::run()
 
 
             // Update shader data ********************************
-            //shaderData.projection = glm::perspective(glm::radians(45.0f), aspect, 0.1f, 32.0f);
             shaderData.projection = camera.getProjection();
             shaderData.view = camera.getView();
             shaderData.cameraPos = glm::vec4(viewerObject.transform.translation, 1.0f);
-            //shaderData.view = glm::inverse(viewerObject.transform.mat4());//glm::translate(glm::mat4(1.0f), camPos);
-            //shaderData.view = glm::translate(glm::mat4(1.0f), viewerObject.transform.translation);
             for (auto& [id, gameObject] : gameObjects) {
                 if (id >= std::size(shaderData.objectData)) break; //TODO: nie jestem pewien czy to nadal potrzebne
                 //shaderData.objectData[i].modelMatrix = glm::translate(glm::mat4(1.0f), instancePos) * glm::mat4_cast(glm::quat(objectRotations[i]));
@@ -170,6 +194,8 @@ void App::run()
             mppRenderer.beginSwapChainRenderPass(commandBuffer);
             
             basicRenderSystem->render(frameInfo);
+
+            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 
             mppRenderer.endSwapChainRenderPass(commandBuffer);
             mppRenderer.endFrame(commandBuffer);
@@ -185,7 +211,72 @@ void App::run()
 }
 
 
+void App::initImGui()
+{
 
+
+    // 2. Inicjalizacja kontekstu ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Gałąź docking
+
+    ImGui::StyleColorsDark();
+
+    // 3. Backend platformy (SDL3)
+    ImGui_ImplSDL3_InitForVulkan(mppWindow.getSDLWindow());
+
+    VkFormat colorFormat = mppRenderer.getSwapChainImageFormat();
+    VkFormat depthFormat = mppRenderer.getSwapChainDepthFormat();
+
+    // 1. Konfiguracja Dynamic Rendering dla głównego potoku ImGui
+    VkPipelineRenderingCreateInfoKHR renderingCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
+        .colorAttachmentCount = 1,
+        .pColorAttachmentFormats = &colorFormat,
+        .depthAttachmentFormat = depthFormat
+    };
+
+    ImGui_ImplVulkan_LoadFunctions(
+        VK_API_VERSION_1_3,
+        [](const char* function_name, void* user_data) -> PFN_vkVoidFunction {
+            return vkGetInstanceProcAddr(reinterpret_cast<VkInstance>(user_data), function_name);
+        },
+        mppDevice.getInstance()
+    );
+    
+    // 2. Wypełnienie nowej struktury ImGui_ImplVulkan_InitInfo
+    ImGui_ImplVulkan_InitInfo initInfo{};
+    initInfo.ApiVersion = VK_API_VERSION_1_3; // Wskazujemy Vulkan 1.3
+    initInfo.Instance = mppDevice.getInstance();
+    initInfo.PhysicalDevice = mppDevice.getPhysicalDevice();
+    initInfo.Device = mppDevice.getLogicalDevice();
+    initInfo.QueueFamily = mppDevice.findPhysicalQueueFamilies().graphicsFamily;
+    initInfo.Queue = mppDevice.getGraphicsQueue();
+    initInfo.PipelineCache = VK_NULL_HANDLE;
+    initInfo.DescriptorPool = VK_NULL_HANDLE;
+    initInfo.DescriptorPoolSize = 100;
+    initInfo.MinImageCount = 2;
+    initInfo.ImageCount = 3;
+
+    // Flaga Dynamic Rendering
+    initInfo.UseDynamicRendering = true;
+
+    // PipelineInfoMain - to tutaj trafiły przeniesione pola:
+    initInfo.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    initInfo.PipelineInfoMain.PipelineRenderingCreateInfo = renderingCreateInfo;
+
+    ImGui_ImplVulkan_Init(&initInfo);
+}
+
+void App::cleanupImGui()
+{
+    vkDeviceWaitIdle(mppDevice.getLogicalDevice());
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+}
 
 } // namespace mpp
 

@@ -14,6 +14,11 @@
 // std
 #include <filesystem>
 
+// libs
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_vulkan.h>
+#include <volk/volk.h>
 
 namespace mpp
 {
@@ -37,6 +42,9 @@ private:
 
     void loadGameObjects();
     void checkAssets() const;
+
+    void initImGui();
+    void cleanupImGui();
 
 public:
     App();
