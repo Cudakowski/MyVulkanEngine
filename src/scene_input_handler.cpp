@@ -15,8 +15,11 @@ void SceneInputHandler::handleEvent(const SDL_Event& event, float dt, MppGameObj
                 auto it = gameObjects.find(selectedId);
                 if (it != gameObjects.end()) {
                     auto& obj = it->second;
-                    obj.transform.rotation.x -= (float)event.motion.yrel * dt;
-                    obj.transform.rotation.y -= (float)event.motion.xrel * dt;
+                    // obj.transform.rotation.x -= (float)event.motion.yrel * dt * mouseSensitivity;
+                    // obj.transform.rotation.y -= (float)event.motion.xrel * dt * mouseSensitivity;
+                    obj.transform.rotation.x -= static_cast<float>(event.motion.yrel) * mouseSensitivity;
+                    obj.transform.rotation.y -= static_cast<float>(event.motion.xrel) * mouseSensitivity;
+
                 }
             }
             break;

@@ -97,13 +97,14 @@ void App::run()
     camera.setViewTarget(glm::vec3(-1.0f,-2.0f,2.0f),glm::vec3(0.0f,0.0f,2.5f));
   
 
-    uint64_t lastTime{ SDL_GetTicks() };
+    uint64_t lastTime{ SDL_GetTicksNS() };
     bool quit{ false };
     while (!quit) {
 
-        float elapsedTime{ (SDL_GetTicks()- lastTime) / 1000.0f };
-        lastTime = SDL_GetTicks();
-        
+        float elapsedTime{ static_cast<float>(SDL_GetTicksNS()- lastTime) / 1'000'000'000.0f };
+        lastTime = SDL_GetTicksNS();
+
+        elapsedTime = std::min(elapsedTime, 0.1f);//ograniczenie
         
 
         // Poll events ********************************

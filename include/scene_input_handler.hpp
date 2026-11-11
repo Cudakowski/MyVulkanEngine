@@ -11,6 +11,7 @@ namespace mpp {
 class SceneInputHandler {
 public:
     void handleEvent(const SDL_Event& event, float dt, MppGameObject::Map& gameObjects, uint32_t& selectedId)const;
+    float mouseSensitivity{0.01f};
 };
 
 } // namespace mpp

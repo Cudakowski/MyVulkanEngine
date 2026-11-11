@@ -17,6 +17,7 @@ void CameraController::update(float dt, MppGameObject& viewerObject) const
     if (glm::dot(rotate, rotate) > std::numeric_limits<float>::epsilon()) 
     {
         viewerObject.transform.rotation += lookSpeed * dt * glm::normalize(rotate);
+        //viewerObject.transform.rotation += lookSpeed * glm::normalize(rotate);
     }
 
     // limit pitch values between about +/- 85ish degrees
