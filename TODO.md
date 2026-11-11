@@ -5,8 +5,8 @@
 - [x] ogarnąć includy
 - [x] Delete/improove mpp_checks
 - [x] Ustawić const funkcje które sie da
-- [ ] mpp_buffer
-- [ ] Dodać dear ImGui
+- [x] Dodać dear ImGui
+- [ ] napisać i zintegrować mpp_buffer
 - [ ] dorobić MppTextureManager/ResourceManager
 - [ ] Add profesional comments
 - [ ] Podzielić modułu shaderów w pipeline'ie kiedy będzie to potrzebne
