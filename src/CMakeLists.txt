@@ -18,6 +18,10 @@ set(SOURCES
     mpp_window.cpp
     external_impl.cpp
     scene_input_handler.cpp
+    mpp_block_chunk.cpp
+    mpp_block_model.cpp
+    block_render_system.cpp
+    player_controller.cpp
 )
 
 

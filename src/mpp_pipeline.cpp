@@ -8,7 +8,7 @@
 namespace mpp
 {
 
-void loadShaders(std::vector<uint32_t> &spirvData)//TODO: Lepiej zaprojektować
+void loadShaders(std::vector<uint32_t> &spirvData, const std::filesystem::path& sourcePath, const std::filesystem::path& cachePath)//TODO: Lepiej zaprojektować
 {
     // LOADING SHADERS =====================================================
     
@@ -16,9 +16,6 @@ void loadShaders(std::vector<uint32_t> &spirvData)//TODO: Lepiej zaprojektować
     // SPIR-V to taki pośredniczący język shaderów który vulkan umie czytać. 
     // GLSL też do niego najpierw sie kompiluje.
     Slang::ComPtr<slang::IGlobalSession> slangGlobalSession;
-
-    const std::filesystem::path sourcePath = "assets/shader.slang";
-    const std::filesystem::path cachePath  = "assets/shader.spv";
 
     
     bool needsCompilation = true;
@@ -150,7 +147,7 @@ MppPipeline::MppPipeline(MppDevice& device,const PipelineConfigInfo& configInfo,
     //     .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
     // };
     std::vector<uint32_t> spirvData{};
-    loadShaders(spirvData);
+    loadShaders(spirvData, configInfo.shaderSourcePath, configInfo.shaderCachePath);
     createShaderModule(spirvData,shaderModule);
 
     

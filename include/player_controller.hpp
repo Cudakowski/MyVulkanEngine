@@ -1,0 +1,51 @@
+#pragma once
+
+#include "mpp_game_object.hpp"
+
+// libs
+#include <SDL3/SDL.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
+
+// std
+#include <limits>
+
+namespace mpp
+{
+
+class PlayerController
+{
+private:
+    struct KeyMappings {
+        SDL_Scancode moveLeft     = SDL_SCANCODE_A;
+        SDL_Scancode moveRight    = SDL_SCANCODE_D;
+        SDL_Scancode moveForward  = SDL_SCANCODE_W;
+        SDL_Scancode moveBackward = SDL_SCANCODE_S;
+        SDL_Scancode moveUp       = SDL_SCANCODE_E;
+        SDL_Scancode moveDown     = SDL_SCANCODE_Q;
+        SDL_Scancode jump         = SDL_SCANCODE_SPACE;
+        SDL_Scancode lookLeft     = SDL_SCANCODE_LEFT;
+        SDL_Scancode lookRight    = SDL_SCANCODE_RIGHT;
+        SDL_Scancode lookUp       = SDL_SCANCODE_UP;
+        SDL_Scancode lookDown     = SDL_SCANCODE_DOWN;
+    };
+public:
+    void update(float dt, MppGameObject& viewerObject, glm::vec3& playerSpeed)const;
+
+    KeyMappings keys{};
+    float moveSpeed{5.0f};
+    float mouseSensitivity{0.005f};
+    float lookSpeed{1.5f};
+    // PlayerController(/* args */);
+    // ~PlayerController();
+
+    // //ustaw pod swoje potrzeby
+    // PlayerController(const PlayerController&) = delete;
+    // PlayerController& operator=(const PlayerController&) = delete;
+    // PlayerController(PlayerController&&) = delete;
+    // PlayerController&& operator=(PlayerController&&) = delete;
+};
+
+} // namespace mpp
+
+

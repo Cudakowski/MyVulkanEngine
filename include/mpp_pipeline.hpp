@@ -20,6 +20,9 @@ struct PipelineConfigInfo {
   PipelineConfigInfo(const PipelineConfigInfo&)=delete;
   PipelineConfigInfo& operator=(const PipelineConfigInfo&)=delete;
 
+  std::string shaderSourcePath = "assets/shader.slang";
+  std::string shaderCachePath  = "assets/shader.spv";
+
   std::vector<VkVertexInputBindingDescription> bindingDescriptions{}; 
   std::vector<VkVertexInputAttributeDescription> attributeDescriptions{}; 
   VkPipelineViewportStateCreateInfo viewportInfo;

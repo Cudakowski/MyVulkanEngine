@@ -18,7 +18,7 @@ MppTexture::~MppTexture()
 
 
 
-std::unique_ptr<MppTexture> MppTexture::createTextureFromFile(MppDevice& mppDevice ,const std::string &filepath)
+std::unique_ptr<MppTexture> MppTexture::createTextureFromFile(MppDevice& mppDevice ,const std::string &filepath, bool pixelized )
 {
 
     ktxTexture* ktxTexture{ nullptr };
@@ -191,8 +191,8 @@ std::unique_ptr<MppTexture> MppTexture::createTextureFromFile(MppDevice& mppDevi
     //sampler
     VkSamplerCreateInfo samplerCI{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .magFilter = VK_FILTER_LINEAR,
-        .minFilter = VK_FILTER_LINEAR,
+        .magFilter = pixelized ? VK_FILTER_NEAREST : VK_FILTER_LINEAR,
+        .minFilter = pixelized ? VK_FILTER_NEAREST : VK_FILTER_LINEAR,
         .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
         .anisotropyEnable = VK_TRUE,
         .maxAnisotropy = 8.0f, // 8 is a widely supported value for max anisotropy
@@ -208,7 +208,7 @@ std::unique_ptr<MppTexture> MppTexture::createTextureFromFile(MppDevice& mppDevi
     };
 
 
-    return std::move(mppTexture);
+    return mppTexture;
 }
 
 } // namespace mpp

@@ -32,7 +32,7 @@ public:
     MppTexture(MppDevice& device);
     ~MppTexture();
     
-    static std::unique_ptr<MppTexture> createTextureFromFile(MppDevice& mppDevice ,const std::string &file);
+    static std::unique_ptr<MppTexture> createTextureFromFile(MppDevice& mppDevice ,const std::string &file, bool pixelized = false);
     VkDescriptorImageInfo getDescriptorInfo()const{return textureDescriptor;}
 };
 

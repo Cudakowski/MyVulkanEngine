@@ -35,7 +35,7 @@ void BasicRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayo
     VkPushConstantRange pushConstantRange{
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, //| VK_SHADER_STAGE_FRAGMENT_BIT  TODO:nie wiem czy potrzebne
         .offset = 0,
-        .size = sizeof(PushConstants)// max =  128 bajtów
+        .size = sizeof(PushConstants)// tu 16, max =  128 bajtów
     };
     VkPipelineLayoutCreateInfo pipelineLayoutCI{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,

@@ -1,5 +1,7 @@
 #include "app.hpp"
 
+#include "mpp_block_chunk.hpp"
+#include "player_controller.hpp"
 
 namespace mpp
 {
@@ -40,6 +42,42 @@ void App::loadGameObjects()
     object3.textureID = 2;
     object3.transform.translation = glm::vec3(3.0f, 0.0f, 0.0f);
     gameObjects.emplace(object3.getId(), std::move(object3));
+
+    mppTexture = MppTexture::createTextureFromFile(mppDevice, "assets/blocks/unbreak.ktx", true);
+    textureDescriptors.push_back(mppTexture->getDescriptorInfo());
+    textures.push_back(std::move(mppTexture));
+
+    mppTexture = MppTexture::createTextureFromFile(mppDevice, "assets/blocks/dirt.ktx", true);
+    textureDescriptors.push_back(mppTexture->getDescriptorInfo());
+    textures.push_back(std::move(mppTexture));
+
+    mppTexture = MppTexture::createTextureFromFile(mppDevice, "assets/blocks/stone.ktx", true);
+    textureDescriptors.push_back(mppTexture->getDescriptorInfo());
+    textures.push_back(std::move(mppTexture));
+
+    mppTexture = MppTexture::createTextureFromFile(mppDevice, "assets/blocks/sand.ktx", true);
+    textureDescriptors.push_back(mppTexture->getDescriptorInfo());
+    textures.push_back(std::move(mppTexture));
+
+    mppTexture = MppTexture::createTextureFromFile(mppDevice, "assets/blocks/grass.ktx", true);
+    textureDescriptors.push_back(mppTexture->getDescriptorInfo());
+    textures.push_back(std::move(mppTexture));
+
+    mppTexture = MppTexture::createTextureFromFile(mppDevice, "assets/blocks/brick.ktx", true);
+    textureDescriptors.push_back(mppTexture->getDescriptorInfo());
+    textures.push_back(std::move(mppTexture));
+
+    mppTexture = MppTexture::createTextureFromFile(mppDevice, "assets/blocks/wood.ktx", true);
+    textureDescriptors.push_back(mppTexture->getDescriptorInfo());
+    textures.push_back(std::move(mppTexture));
+
+    mppTexture = MppTexture::createTextureFromFile(mppDevice, "assets/blocks/leaf.ktx", true);
+    textureDescriptors.push_back(mppTexture->getDescriptorInfo());
+    textures.push_back(std::move(mppTexture));
+
+    mppTexture = MppTexture::createTextureFromFile(mppDevice, "assets/blocks/planks.ktx", true);
+    textureDescriptors.push_back(mppTexture->getDescriptorInfo());
+    textures.push_back(std::move(mppTexture));
 }
 
 void App::checkAssets() const
@@ -84,18 +122,37 @@ void App::run()
         textureLayout->getDescriptorSetLayout()
     );
 
+    blockRenderSystem = std::make_unique<Block::BlockRenderSystem>(
+        mppDevice, 
+        mppRenderer.getSwapChainImageFormat(),
+        mppRenderer.getSwapChainDepthFormat(),
+        textureLayout->getDescriptorSetLayout()
+    );
+
     initImGui();
 
+    // Game data
     ShaderData shaderData{};
 
+    uint32_t cameraIndex{};
     auto viewerObject = MppGameObject::createGameObject();
     viewerObject.transform.translation.z = 6.0f;
     viewerObject.transform.rotation.y = glm::pi<float>();
+    auto playerObject = MppGameObject::createGameObject();
+    constexpr float gravity{15.f};
+    glm::vec3 playerVelocity{};
+    Block::BlockID currentBlock{Block::BlockID::BRICK};
     CameraController cameraController{};
     SceneInputHandler sceneInputHandler{};
+    PlayerController playerController{};
     MppCamera camera{};
     camera.setViewTarget(glm::vec3(-1.0f,-2.0f,2.0f),glm::vec3(0.0f,0.0f,2.5f));
-  
+
+    std::vector<std::unique_ptr<mpp::Block::MppBlockChunk>> chunks;
+    chunks.push_back(std::make_unique<mpp::Block::MppBlockChunk>(mppDevice));
+
+    chunks[0]->calculateMesh();
+    playerObject.transform.translation = chunks[0]->determinePlayerStartingPosition();
 
     uint64_t lastTime{ SDL_GetTicksNS() };
     bool quit{ false };
@@ -131,38 +188,155 @@ void App::run()
                 default:
                     //blokowanie zdarzeń kiedy jest interakcja z imgui
                     ImGuiIO& io = ImGui::GetIO();
-                    bool mouseHandled = io.WantCaptureMouse && 
-                        (event.type >= SDL_EVENT_MOUSE_MOTION && event.type <= SDL_EVENT_MOUSE_WHEEL);
-                    bool keyboardHandled = io.WantCaptureKeyboard && 
-                        (event.type >= SDL_EVENT_KEY_DOWN && event.type <= SDL_EVENT_KEY_UP);
+                    bool mouseHandled    = io.WantCaptureMouse    && (event.type >= SDL_EVENT_MOUSE_MOTION && event.type <= SDL_EVENT_MOUSE_WHEEL);
+                    bool keyboardHandled = io.WantCaptureKeyboard && (event.type >= SDL_EVENT_KEY_DOWN     && event.type <= SDL_EVENT_KEY_UP);
 
                     if (!mouseHandled && !keyboardHandled) {
-                        sceneInputHandler.handleEvent(event, elapsedTime, gameObjects, shaderData.selected);
+                        //sceneInputHandler.handleEvent(event, elapsedTime, gameObjects, shaderData.selected, cameraIndex, mppWindow, quit, chunks);
+                        auto& selectedId = shaderData.selected;
+                        float mouseSensitivity{0.01f};
+                        switch (event.type) {
+
+                            //Rotate the selected object with mouse drag
+                            case SDL_EVENT_MOUSE_MOTION:
+                            {
+                                if(cameraIndex ==0)
+                                if(event.motion.state & SDL_BUTTON_LMASK) //event.button.button == SDL_BUTTON_LEFT
+                                {
+                                    auto it = gameObjects.find(selectedId);
+                                    if (it != gameObjects.end()) {
+                                        auto& obj = it->second;
+                                        // obj.transform.rotation.x -= (float)event.motion.yrel * dt * mouseSensitivity;
+                                        // obj.transform.rotation.y -= (float)event.motion.xrel * dt * mouseSensitivity;
+                                        obj.transform.rotation.x -= static_cast<float>(event.motion.yrel) * mouseSensitivity;
+                                        obj.transform.rotation.y -= static_cast<float>(event.motion.xrel) * mouseSensitivity;
+
+                                    }
+                                }
+                                break;
+                            }
+
+                            case SDL_EVENT_MOUSE_BUTTON_DOWN:
+                            {
+                                if(cameraIndex ==1)
+                                if(event.button.button == SDL_BUTTON_LEFT) //event.button.button == SDL_BUTTON_LEFT
+                                {
+                                    chunks[0]->destroyBlock(playerObject.transform.translation, playerObject.transform.rotation);
+                                }
+                                if(cameraIndex ==1)
+                                if(event.button.button == SDL_BUTTON_RIGHT) //event.button.button == SDL_BUTTON_RIGHT
+                                {
+                                    chunks[0]->placeBlock(playerObject.transform.translation, playerObject.transform.rotation, currentBlock);
+                                }
+                                break;
+                            }
+                            case SDL_EVENT_MOUSE_WHEEL:
+                            {
+                                if(cameraIndex ==1)
+                                if (event.wheel.y > 0.0f) 
+                                {
+                                    auto next = static_cast<Block::BlockType>(currentBlock) + 1;
+                                    if (next > static_cast<Block::BlockType>(Block::BlockID::PLANKS)) {
+                                        next = static_cast<Block::BlockType>(Block::BlockID::DIRT);
+                                    }
+                                    currentBlock = static_cast<Block::BlockID>(next);
+                                }
+                                else if (event.wheel.y < 0.0f) 
+                                {
+                                    auto prev = static_cast<Block::BlockType>(currentBlock) - 1;
+                                    if (prev < static_cast<Block::BlockType>(Block::BlockID::DIRT)) {
+                                        prev = static_cast<Block::BlockType>(Block::BlockID::PLANKS);
+                                    }
+                                    currentBlock = static_cast<Block::BlockID>(prev);
+                                }
+                                break;
+                            }
+
+
+                            // Select active model instance
+                            case SDL_EVENT_KEY_DOWN:
+                            {
+                                if (event.key.key == SDLK_ESCAPE)
+                                {
+                                    quit = true;
+                                }
+                                if (event.key.key == SDLK_PLUS || event.key.key == SDLK_KP_PLUS)
+                                {
+                                    selectedId = (selectedId < 2) ? selectedId + 1 : 0;
+                                }
+                                if (event.key.key == SDLK_MINUS || event.key.key == SDLK_KP_MINUS)
+                                {
+                                    selectedId = (selectedId > 0) ? selectedId - 1 : 2;
+                                }
+                                if (event.key.key == SDLK_0 )
+                                {
+                                    cameraIndex = 0;
+                                    mppWindow.setRelativeMouseMode(false);
+                                }
+                                if (event.key.key == SDLK_1 )
+                                {
+                                    cameraIndex = 1;
+                                    mppWindow.setRelativeMouseMode(true);
+                                }
+                                break;
+                            }
+
+                            default:
+                                break;
+                        }
                     }
                     break;
             }
         }
 
-        // 1. Start nowej klatki ImGui
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
-        // 2. Przykładowe okienko diagnostyczne
-        ImGui::Begin("Engine Diagnostics");
-        ImGui::Text("FPS: %.1f (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-        ImGui::Text("Rendered objects: %zu", gameObjects.size());
-        ImGui::Separator();
-        ImGui::DragFloat3("Camera Pos", &viewerObject.transform.translation.x, 0.1f);
-        ImGui::End();
+        if(cameraIndex ==0)
+        {
+            ImGui::Begin("Engine Diagnostics");
+            ImGui::Text("FPS: %.1f (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+            ImGui::Text("Rendered objects: %zu", gameObjects.size());
+            ImGui::Separator();
+            ImGui::DragFloat3("Camera Pos", &viewerObject.transform.translation.x, 0.1f);
+            ImGui::End();
+        }
+        if(cameraIndex ==1)
+        {
+            ImGui::Begin("Majkarp Diagnostics");
+            ImGui::Text("FPS: %.1f (%.3f ms)", ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+            ImGui::Text("Current block: %s", Block::toString(currentBlock).data());
+            ImGui::End();
+        }
 
-        // 3. Zakończenie definicji UI i wygenerowanie geometrii wierzchołków
+
         ImGui::Render();
 
-        cameraController.update(elapsedTime, viewerObject);
-        camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
+        
+        switch (cameraIndex)
+        {
+        case 0:
+            cameraController.update(elapsedTime, viewerObject);
+            camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
+            break;
+        case 1:
+            playerVelocity.y += gravity * elapsedTime;
+            chunks[0]->checkCollision(playerObject.transform.translation, playerVelocity, elapsedTime);
+            playerController.update(elapsedTime,playerObject, playerVelocity);
+            camera.setViewYXZ(playerObject.transform.translation+glm::vec3{0.f, -1.8f, 0.f}, playerObject.transform.rotation);
+            break;
+        
+        default:
+            cameraController.update(elapsedTime, viewerObject);
+            camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
+            break;
+        }
+
+
+        
         float aspect = mppRenderer.getAspectRatio();
-        camera.setPerspectiveProjection(glm::radians(45.f), aspect, 0.1f, 32.f);
+        camera.setPerspectiveProjection(glm::radians(45.f), aspect, 0.1f, 64.f);
         
         if(auto commandBuffer = mppRenderer.beginFrame())
         {
@@ -194,7 +368,20 @@ void App::run()
 
             mppRenderer.beginSwapChainRenderPass(commandBuffer);
             
-            basicRenderSystem->render(frameInfo);
+            if(cameraIndex == 1)
+            {
+                for (auto& chunk : chunks) {
+                    if (chunk->isDirty()) {
+                        chunk->calculateMesh();
+                    }
+                }
+                blockRenderSystem->render(frameInfo, chunks);
+            }
+            else
+            {
+                basicRenderSystem->render(frameInfo);
+            }
+            
 
             ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
 

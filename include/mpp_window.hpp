@@ -55,6 +55,7 @@ public:
     void createWindowSurface(VkInstance instance, VkSurfaceKHR& surface )const;
     void setWindowResized(int width, int height);
     SDL_Window* getSDLWindow()const{return window;}
+    void setRelativeMouseMode(bool mode){SDL_SetWindowRelativeMouseMode(window, mode);}
 
 };
 

@@ -10,6 +10,7 @@
 #include "scene_input_handler.hpp"
 #include "mpp_camera.hpp"
 #include "mpp_descriptors.hpp"
+#include "block_render_system.hpp"
 
 // std
 #include <filesystem>
@@ -39,6 +40,7 @@ private:
 
     MppGameObject::Map gameObjects;
     std::unique_ptr<BasicRenderSystem> basicRenderSystem{};
+    std::unique_ptr<Block::BlockRenderSystem> blockRenderSystem{};
 
     void loadGameObjects();
     void checkAssets() const;
