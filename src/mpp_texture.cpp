@@ -193,10 +193,10 @@ std::unique_ptr<MppTexture> MppTexture::createTextureFromFile(MppDevice& mppDevi
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = pixelized ? VK_FILTER_NEAREST : VK_FILTER_LINEAR,
         .minFilter = pixelized ? VK_FILTER_NEAREST : VK_FILTER_LINEAR,
-        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-        .anisotropyEnable = VK_TRUE,
-        .maxAnisotropy = 8.0f, // 8 is a widely supported value for max anisotropy
-        .maxLod = (float)ktxTexture->numLevels
+        .mipmapMode = pixelized ? VK_SAMPLER_MIPMAP_MODE_NEAREST : VK_SAMPLER_MIPMAP_MODE_LINEAR,
+        .anisotropyEnable = pixelized ? VK_FALSE : VK_TRUE,
+        .maxAnisotropy = pixelized ? 1.0f : 8.0f, // 8 is a widely supported value for max anisotropy
+        .maxLod = static_cast<float>(ktxTexture->numLevels)
     };
     chk(vkCreateSampler(mppDevice.getLogicalDevice(), &samplerCI, nullptr, &mppTexture->sampler));
 
